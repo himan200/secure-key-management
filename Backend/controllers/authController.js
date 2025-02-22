@@ -37,3 +37,37 @@ module.exports.registerUser = async (req, res, next) => {
     next(error);
   }
 };
+
+module.exports.loginUser = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { email, password } = req.body;
+
+  try {
+    // Find user by email and select the password field
+    const user = await usermodel.findOne({ email }).select('password');
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if the password matches
+    const isMatch = await user.comparePassword(password); // This should work now
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate authentication token
+    const token = await user.generateAuthToken();
+    
+    // Send response with the token and user data
+    res.status(200).json({ token, user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+

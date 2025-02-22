@@ -63,3 +63,63 @@ fullname.lastname: Optional, minimum 3 characters if provided.
 date_of_birth: Required, valid date in ISO 8601 format.
 email: Required, must be a valid email address.
 password: Required, minimum 6 characters.
+
+
+/auth/login Endpoint
+The /auth/login endpoint allows existing users to log in by providing their email and password. It returns an authentication token on successful login.
+
+Endpoint Details
+Method: POST
+URL: /auth/login
+Request Body
+The endpoint expects a JSON object with the following structure:
+
+{
+  "email": "string (valid email address)",
+  "password": "string (min 6 characters)"
+}
+
+Response
+Success (200 OK)
+Status Code: 200
+Content: JSON object containing the authentication token and user data.
+
+{
+  "token": "jwt_token",
+  "user": {
+    "_id": "user_id",
+    "fullname": {
+      "firstname": "John",
+      "lastname": "Doe"
+    },
+    "date_of_birth": "YYYY-MM-DDT00:00:00.000Z",
+    "email": "john@example.com"
+  }
+}
+
+Client Error (400 Bad Request)
+Status Code: 400
+Content: JSON object containing validation error details if the request data fails to meet criteria.
+
+
+{
+  "errors": [
+    { "msg": "Invalid email", "param": "email", "location": "body" },
+    { "msg": "Password must be at least 6 characters long", "param": "password", "location": "body" }
+  ]
+}
+
+Client Error (401 Unauthorized)
+Status Code: 401
+Content: Error message when the provided credentials are invalid.
+
+{
+  "message": "Invalid credentials"
+}
+
+Server Error (500 Internal Server Error)
+Status Code: 500
+Content: Error message when an unexpected error occurs.
+Validation Rules
+email: Required, must be a valid email address.
+password: Required, minimum 6 characters.

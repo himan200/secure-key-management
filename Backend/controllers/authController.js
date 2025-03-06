@@ -1,6 +1,7 @@
 const usermodel = require('../models/User');
 const authservice = require('../services/authService');
 const bcrypt = require('bcryptjs');
+const emailservice = require('../utils/emailService');
 const { validationResult } = require('express-validator');
 
 // Controller for registering a user
@@ -17,20 +18,32 @@ module.exports.registerUser = async (req, res, next) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex")
+    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+
     // Call the service to create the user
     const user = await authservice.createUser({
      firstname: fullname.firstname,
      lastname: fullname.lastname,
       date_of_birth,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      verificationToken,
+      verificationExpires,
+      isverified: false,
     });
 
+    // Send verification email
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    await emailservice.sendverificationEmail(user.email, verificationUrl);
     // Generate the auth token for the user
     const token = await user.generateAuthToken();
 
     // Respond with the user data and token
-    res.status(201).json({ user, token });
+    res.status(201).json({ user,
+       token,
+        message: 'Registration successful! Please check your email to verify your accound. ' });
 
   } catch (error) {
     // If there's an error, pass it to the next middleware

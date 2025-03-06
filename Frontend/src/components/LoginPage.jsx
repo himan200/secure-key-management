@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -6,19 +8,39 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Link, useNavigate } from "react-router-dom"
 import { Navbar } from "./Navbar"
-import { Shield, Key, Lock } from 'lucide-react'
-import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp"
+import { Shield, Key, Lock } from "lucide-react"
 
 export function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" })
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
-  const [otp, setOtp] = useState("")
+  const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [error, setError] = useState("")
   const navigate = useNavigate()
+  const otpInputRefs = Array(6)
+    .fill(0)
+    .map(() => React.createRef())
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleOtpChange = (index, value) => {
+    const newOtp = [...otp]
+    newOtp[index] = value
+    setOtp(newOtp)
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpInputRefs[index + 1].current.focus()
+    }
+  }
+
+  const handleKeyDown = (index, e) => {
+    // Handle backspace
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputRefs[index - 1].current.focus()
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -32,8 +54,12 @@ export function LoginPage() {
 
       if (step === 1) {
         setStep(2) // Move to OTP step
+        // Focus the first OTP input after a short delay
+        setTimeout(() => {
+          otpInputRefs[0].current.focus()
+        }, 100)
       } else {
-        console.log("Login successful", { ...formData, otp })
+        console.log("Login successful", { ...formData, otp: otp.join("") })
         navigate("/dashboard")
       }
     } catch (err) {
@@ -128,30 +154,39 @@ export function LoginPage() {
                     >
                       <div className="space-y-2">
                         <Label htmlFor="otp">Enter OTP</Label>
-                        <InputOTP
-                          maxLength={6}
-                          value={otp}
-                          onChange={setOtp}
-                          render={({ slots }) => (
-                            <InputOTPGroup>
-                              {slots && (
-                                <>
-                                  <InputOTPGroup>
-                                    {slots.slice(0, 3).map((slot, index) => (
-                                      <InputOTPSlot key={index} {...slot} />
-                                    ))}
-                                  </InputOTPGroup>
-                                  <InputOTPSeparator />
-                                  <InputOTPGroup>
-                                    {slots.slice(3).map((slot, index) => (
-                                      <InputOTPSlot key={index + 3} {...slot} />
-                                    ))}
-                                  </InputOTPGroup>
-                                </>
-                              )}
-                            </InputOTPGroup>
-                          )}
-                        />
+                        <div className="flex justify-center">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              {[0, 1, 2].map((index) => (
+                                <input
+                                  key={index}
+                                  ref={otpInputRefs[index]}
+                                  type="text"
+                                  maxLength={1}
+                                  value={otp[index]}
+                                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                                  onKeyDown={(e) => handleKeyDown(index, e)}
+                                  className="h-10 w-10 text-center text-base font-medium shadow-sm border border-input rounded-md focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-gray-50 text-gray-900"
+                                />
+                              ))}
+                            </div>
+                            <div className="flex items-center text-muted-foreground">-</div>
+                            <div className="flex items-center gap-2">
+                              {[3, 4, 5].map((index) => (
+                                <input
+                                  key={index}
+                                  ref={otpInputRefs[index]}
+                                  type="text"
+                                  maxLength={1}
+                                  value={otp[index]}
+                                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                                  onKeyDown={(e) => handleKeyDown(index, e)}
+                                  className="h-10 w-10 text-center text-base font-medium shadow-sm border border-input rounded-md focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-gray-50 text-gray-900"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <p className="text-sm text-muted-foreground text-center">
                         Didn't receive the code?{" "}
@@ -165,7 +200,7 @@ export function LoginPage() {
 
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (step === 2 && otp.some((digit) => !digit))}
                   className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:opacity-90"
                 >
                   {loading ? "Processing..." : step === 1 ? "Next" : "Sign In"}
@@ -191,3 +226,4 @@ export function LoginPage() {
 }
 
 export default LoginPage
+

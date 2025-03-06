@@ -59,7 +59,7 @@
     "react-three": "^0.9.7",
     "recharts": "^2.15.1",
     "sonner": "^2.0.0",
-    "tailwind-merge": "^3.0.1",
+    "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.173.0",
     "vaul": "^1.1.2",

@@ -1,86 +1,154 @@
 const usermodel = require('../models/User');
+const LoginOTP = require('../models/LoginOTP');
 const authservice = require('../services/authService');
 const bcrypt = require('bcryptjs');
-const emailservice = require('../utils/emailService');
 const { validationResult } = require('express-validator');
+const crypto = require('crypto');
+const emailService = require('../services/emailServices'); // 👈 fixed case
 
 // Controller for registering a user
-module.exports.registerUser = async (req, res, next) => {
-  // Check for validation errors
+const registerUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { fullname,date_of_birth, email, password, } = req.body;
+  const { fullname, date_of_birth, email, password } = req.body;
 
   try {
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000;
 
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString("hex")
-    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-
-    // Call the service to create the user
     const user = await authservice.createUser({
-     firstname: fullname.firstname,
-     lastname: fullname.lastname,
+      firstname: fullname.firstname,
+      lastname: fullname.lastname,
       date_of_birth,
       email,
       password: hashedPassword,
       verificationToken,
       verificationExpires,
-      isverified: false,
+      isVerified: false,
     });
 
-    // Send verification email
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    await emailservice.sendverificationEmail(user.email, verificationUrl);
-    // Generate the auth token for the user
+    await emailService.sendVerificationEmail(user.email, verificationUrl);
+
     const token = await user.generateAuthToken();
 
-    // Respond with the user data and token
-    res.status(201).json({ user,
-       token,
-        message: 'Registration successful! Please check your email to verify your accound. ' });
+    res.status(201).json({
+      user,
+      token,
+      message: 'Registration successful! Please check your email to verify your account.',
+    });
 
   } catch (error) {
-    // If there's an error, pass it to the next middleware
     next(error);
   }
 };
 
-module.exports.loginUser = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+// Controller for user login
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await usermodel.findOne({ email }).select('+password');
 
-  const { email, password } = req.body;
+
+    if (!user)
+      return res.status(400).json({ error: 'Invalid email or password' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(400).json({ error: 'Invalid email or password' });
+
+    if (!user.isVerified)
+      return res.status(400).json({ error: 'Please verify your email first.' });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await LoginOTP.create({
+      user: user._id,
+      otp,
+      expiresAt
+    });
+
+    await emailService.sendLoginOTP(user.email, otp);
+
+    res.status(200).json({
+      message: 'OTP sent to your email. Please verify to complete login.',
+      userId: user._id  // Send this so frontend can use it during OTP verification
+    });
+
+  } catch (err) {
+    console.error("Login error:", err); // Add this
+    res.status(500).json({ error: 'Server error', details: err.message }); // Also return the message for debugging
+  }
+  
+};
+
+// Controller for verifying login OTP
+const verifyLoginOtp = async (req, res) => {
+  const { userId, otp } = req.body;
 
   try {
-    // Find user by email and select the password field
-    const user = await usermodel.findOne({ email }).select('password');
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    const record = await LoginOTP.findOne({ user: userId, otp });
+
+    if (!record) {
+      return res.status(400).json({ message: 'Invalid OTP' });
     }
 
-    // Check if the password matches
-    const isMatch = await user.comparePassword(password); 
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    if (record.expiresAt < new Date()) {
+      await LoginOTP.deleteOne({ _id: record._id });
+      return res.status(400).json({ message: 'OTP expired' });
     }
 
-    // Generate authentication token
+    await LoginOTP.deleteMany({ user: userId });
+
+    // ✅ OPTIONAL: Generate JWT now and send it to the user
+    const user = await usermodel.findById(userId);
     const token = await user.generateAuthToken();
-    
-    // Send response with the token and user data
-    res.status(200).json({ token, user });
+
+    res.status(200).json({ message: 'OTP verified successfully', token });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
+// Controller to verify the email
+const verify = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
 
+    const user = await usermodel.findOne({ verificationToken: token });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid token' });
+    }
+
+    if (user.verificationExpires && user.verificationExpires < Date.now()) {
+      return res.status(400).json({ message: 'Token has expired. Please register again.' });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Email verified successfully!' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Export all controllers
+module.exports = {
+  registerUser,
+  loginUser,
+  verify,
+  verifyLoginOtp // 👈 export OTP verification too
+};

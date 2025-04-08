@@ -20,6 +20,8 @@ const registerUser = async (req, res, next) => {
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationExpires = Date.now() + 24 * 60 * 60 * 1000;
 
+    console.log(" Verification Token:", verificationToken); // 👈 Token logged here
+
     const user = await authservice.createUser({
       firstname: fullname.firstname,
       lastname: fullname.lastname,
@@ -31,7 +33,10 @@ const registerUser = async (req, res, next) => {
       isVerified: false,
     });
 
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    const baseUrl = process.env.FRONTEND_URL.trim();
+    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+    console.log("Verification URL:", verificationUrl); // 👈 URL logged here
+
     await emailService.sendVerificationEmail(user.email, verificationUrl);
 
     const token = await user.generateAuthToken();
@@ -46,6 +51,7 @@ const registerUser = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // Controller for user login
 const loginUser = async (req, res) => {
@@ -127,8 +133,12 @@ const verify = async (req, res, next) => {
 
     const user = await usermodel.findOne({ verificationToken: token });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid token' });
+      return res.status(400).json({ message: 'ErrorHere' });
     }
+
+    console.log("Equal?", token === user.verificationToken);
+console.log("Lengths:", token.length, user.verificationToken.length);
+
 
     if (user.verificationExpires && user.verificationExpires < Date.now()) {
       return res.status(400).json({ message: 'Token has expired. Please register again.' });

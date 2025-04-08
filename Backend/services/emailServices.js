@@ -21,8 +21,74 @@ const sendVerificationEmail = async (email, verificationUrl) => {
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Verify Your Email - Secure Key Management",
-      html: `<p>Click the link below to verify your email:</p>
-             <a href="${verificationUrl}">Verify Email</a>`,
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 24px;
+            color: #646cff;
+            text-align: center;
+        }
+        p {
+            font-size: 16px;
+            color: #555;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #646cff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 16px;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #5a5ee0;
+        }
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Our Platform!</h1>
+        <p>Please click the link below to verify your email address and complete your registration process:</p>
+        <p><a href="${verificationUrl}" class="button">Verify Email</a></p>
+        <div class="footer">
+            <p>If you did not create an account, please ignore this email.</p>
+        </div>
+    </div>
+</body>
+</html>
+`,
     });
 
     console.log("✅ Email sent successfully!");
@@ -37,7 +103,74 @@ const sendLoginOTP = async (email, otp) => {
   const mailOptions = {
     to: email,
     subject: 'Your Login OTP',
-    html: `<p>Your login OTP is: <b>${otp}</b>. It will expire in 5 minutes.</p>`
+    html: `<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f6f9fc;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+      }
+      .header {
+        text-align: center;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eaeaea;
+      }
+      .header h2 {
+        margin: 0;
+        color: #2e86de;
+      }
+      .content {
+        padding-top: 20px;
+        text-align: center;
+      }
+      .otp-box {
+        display: inline-block;
+        background-color: #f1f3f5;
+        padding: 12px 24px;
+        font-size: 24px;
+        letter-spacing: 3px;
+        border-radius: 6px;
+        font-weight: bold;
+        margin: 20px 0;
+        color: #111;
+      }
+      .footer {
+        text-align: center;
+        color: #888;
+        font-size: 12px;
+        margin-top: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Secure Key Management</h2>
+      </div>
+      <div class="content">
+        <p>Hello,</p>
+        <p>Use the OTP below to complete your login. This code is valid for <strong>5 minutes</strong>.</p>
+        <div class="otp-box">${otp}</div>
+        <p>If you did not request this, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} Secure Key Management. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`
   };
 
   await transporter.sendMail(mailOptions);

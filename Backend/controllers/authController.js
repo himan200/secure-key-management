@@ -126,34 +126,32 @@ const verifyLoginOtp = async (req, res) => {
 // Controller to verify the email
 const verify = async (req, res, next) => {
   try {
-    const { token } = req.query;
-    if (!token) {
+    const { token: rawToken } = req.query;
+  
+    if (!rawToken) {
       return res.status(400).json({ message: 'Token is required' });
     }
-
-    const user = await usermodel.findOne({ verificationToken: token });
+  
+    const cleanedToken = rawToken.trim();
+    const user = await usermodel.findOne({ verificationToken: cleanedToken });
+  
     if (!user) {
-      return res.status(400).json({ message: 'ErrorHere' });
+      return res.status(400).json({ message: 'User not found for this token' });
     }
-
-    console.log("Equal?", token === user.verificationToken);
-console.log("Lengths:", token.length, user.verificationToken.length);
-
-
-    if (user.verificationExpires && user.verificationExpires < Date.now()) {
-      return res.status(400).json({ message: 'Token has expired. Please register again.' });
-    }
-
+  
     user.isVerified = true;
     user.verificationToken = undefined;
-    user.verificationExpires = undefined;
-    await user.save();
-
-    res.status(200).json({ message: 'Email verified successfully!' });
+  
+    await user.save(); // 👈 This might be failing!
+  
+    return res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
-    next(error);
+    console.error("❌ Error during verification:", error);
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
   }
+  
 };
+
 
 // Export all controllers
 module.exports = {

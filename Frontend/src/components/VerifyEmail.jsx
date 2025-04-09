@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import axios from "axios"
 import { useSearchParams, useNavigate } from "react-router-dom"
@@ -15,8 +15,15 @@ const VerifyEmail = () => {
   const [message, setMessage] = useState("")
   const navigate = useNavigate()
 
+  const hasVerified = useRef(false);
+
+
   useEffect(() => {
     const token = searchParams.get("token")
+
+    if (!token || hasVerified.current) return;
+
+  hasVerified.current = true; // Prevents multiple verifications
 
     const verify = async () => {
       if (!token) {

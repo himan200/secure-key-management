@@ -13,25 +13,39 @@ const registerUser = async (req, res, next) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { fullname, date_of_birth, email, password } = req.body;
+  const { fullname, date_of_birth, email, phone, password } = req.body;
 
   try {
+    // Check if email exists and is unverified
+    let user = await usermodel.findOne({ email, isVerified: false });
+    
     const hashedPassword = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationExpires = Date.now() + 24 * 60 * 60 * 1000;
 
-    console.log(" Verification Token:", verificationToken); // 👈 Token logged here
-
-    const user = await authservice.createUser({
-      firstname: fullname.firstname,
-      lastname: fullname.lastname,
-      date_of_birth,
-      email,
-      password: hashedPassword,
-      verificationToken,
-      verificationExpires,
-      isVerified: false,
-    });
+    if (user) {
+      // Update existing unverified user
+      user.firstname = fullname.firstname;
+      user.lastname = fullname.lastname;
+      user.date_of_birth = date_of_birth;
+      user.password = hashedPassword;
+      user.verificationToken = verificationToken;
+      user.verificationExpires = verificationExpires;
+      await user.save();
+    } else {
+      // Create new user
+      user = await authservice.createUser({
+        firstname: fullname.firstname,
+        lastname: fullname.lastname,
+        date_of_birth,
+        email,
+        phone,
+        password: hashedPassword,
+        verificationToken,
+        verificationExpires,
+        isVerified: false,
+      });
+    }
 
     const baseUrl = process.env.FRONTEND_URL.trim();
     const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
@@ -111,11 +125,19 @@ const verifyLoginOtp = async (req, res) => {
 
     await LoginOTP.deleteMany({ user: userId });
 
-    // ✅ OPTIONAL: Generate JWT now and send it to the user
     const user = await usermodel.findById(userId);
+    user.isOtpVerified = true;
+    await user.save();
+    
     const token = await user.generateAuthToken();
-
-    res.status(200).json({ message: 'OTP verified successfully', token });
+    res.status(200).json({ 
+      message: 'OTP verified successfully', 
+      token,
+      user: {
+        _id: user._id,
+        email: user.email
+      }
+    });
 
   } catch (err) {
     console.error(err);
@@ -154,9 +176,85 @@ const verify = async (req, res, next) => {
 
 
 // Export all controllers
+const forgotPassword = async (req, res) => {
+  try {
+    console.log('Forgot password request received:', req.body);
+    const { email } = req.body;
+    if (!email) {
+      console.error('Email is required');
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    const user = await usermodel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+    // Save token to user
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpiry;
+    await user.save();
+
+    // Send email
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    await emailService.sendPasswordResetEmail(user.email, resetUrl);
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Password reset link sent to your email',
+      email: user.email
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    console.log('Received reset request with token:', token);
+    
+    // Find user by reset token
+    const user = await usermodel.findOne({ 
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() } 
+    });
+    
+    console.log('User found for token:', user ? user.email : 'No user found');
+    if (user) {
+      console.log('Token expires at:', new Date(user.resetPasswordExpires));
+    }
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    // Update password and clear reset token
+    user.password = await bcrypt.hash(password, 12);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Password updated successfully' 
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   verify,
-  verifyLoginOtp // 👈 export OTP verification too
+  verifyLoginOtp,
+  forgotPassword,
+  resetPassword
 };

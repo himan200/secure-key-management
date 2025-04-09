@@ -1,51 +1,34 @@
-"use client"
+import { useState } from 'react';
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Card } from "./ui/card";
+import { Navbar } from './Navbar';
+import { motion } from 'framer-motion';
+import { Shield, Key, Lock, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription } from "./ui/alert";
+import api from '../api';
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Link } from "react-router-dom"
-import { Navbar } from "./Navbar"
-import { Shield, Key, Lock, ArrowLeft, CheckCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-
-export function ForgotPassword() {
-  const [email, setEmail] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
+export default function ForgotPassword() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong")
-      }
-
-      setSuccess(true)
+      const { data } = await api.post('/forgot-password', { email });
+      setSuccess(true);
     } catch (err) {
-      console.error("Forgot password error:", err)
-      setError(err.message || "An error occurred. Please try again.")
+      setError(err.response?.data?.error || "An error occurred. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600">
@@ -61,13 +44,13 @@ export function ForgotPassword() {
       <div className="container mx-auto px-4 pt-20 pb-12">
         <div className="max-w-md mx-auto">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <Card className="p-6 backdrop-blur-sm bg-white/95 shadow-2xl">
+            <Card className="p-8 backdrop-blur-sm bg-white/95 shadow-2xl">
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                   Forgot Password
                 </h1>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Enter your email address and we'll send you a link to reset your password
+                  Enter your email to receive a reset link
                 </p>
               </div>
 
@@ -84,45 +67,33 @@ export function ForgotPassword() {
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Check Your Email</h3>
                   <p className="text-muted-foreground mb-6">
-                    We've sent a password reset link to {email}. Please check your inbox and follow the instructions.
+                    We've sent a password reset link to {email}.
                   </p>
-                  <Link to="/login" className="text-purple-600 hover:text-purple-700 flex items-center justify-center">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Login
-                  </Link>
+                  <Button asChild variant="link">
+                    <a href="/login" className="text-purple-600 hover:text-purple-700 flex items-center justify-center">
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back to Login
+                    </a>
+                  </Button>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label>Email Address</Label>
                     <Input
-                      id="email"
                       type="email"
-                      placeholder="abc@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="border-purple-100 focus:border-purple-300"
                     />
                   </div>
-
                   <Button
                     type="submit"
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:opacity-90"
                   >
-                    {loading ? "Processing..." : "Send Reset Link"}
+                    {loading ? "Sending..." : "Send Reset Link"}
                   </Button>
-
-                  <div className="text-center">
-                    <Link
-                      to="/login"
-                      className="text-purple-600 hover:text-purple-700 flex items-center justify-center"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Login
-                    </Link>
-                  </div>
                 </form>
               )}
             </Card>
@@ -130,8 +101,5 @@ export function ForgotPassword() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default ForgotPassword
-

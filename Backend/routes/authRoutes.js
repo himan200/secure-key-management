@@ -43,6 +43,22 @@ router.post(
   );
   router.get('/verify-email', authController.verify);
   router.post('/verify-login-otp', authController.verifyLoginOtp);
+  
+  // Forgot password route
+  router.post('/forgot-password', 
+    body('email').isEmail().withMessage('Invalid email'),
+    handleValidationErrors,
+    authController.forgotPassword
+  );
 
+  // Reset password route
+  router.post('/reset-password',
+    [
+      body('token').notEmpty().withMessage('Token is required'),
+      body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    ],
+    handleValidationErrors,
+    authController.resetPassword
+  );
 
 module.exports = router;

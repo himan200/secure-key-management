@@ -34,15 +34,33 @@ const userSchema = new mongoose.Schema({
     verificationExpires: {
         type: Date
     },
+    resetPasswordToken: {
+        type: String
+    },
+    resetPasswordExpires: {
+        type: Date
+    },
     isVerified: {
         type: Boolean,
         default: false
-    }
+    },
+    isOtpVerified: {
+        type: Boolean,
+        default: false
+    },
+    tokens: [{
+        token: {
+            type: String,
+            required: true
+        }
+    }]
 });
 
 // Generate JWT token
 userSchema.methods.generateAuthToken = async function () {
     const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET);
+    this.tokens = this.tokens.concat({ token });
+    await this.save();
     return token;
 };
 

@@ -79,7 +79,7 @@ const sendVerificationEmail = async (email, verificationUrl) => {
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to Our Platform!</h1>
+        <h1>Welcome to SecureKey!</h1>
         <p>Please click the link below to verify your email address and complete your registration process:</p>
         <p><a href="${verificationUrl}" class="button">Verify Email</a></p>
         <div class="footer">
@@ -177,7 +177,43 @@ const sendLoginOTP = async (email, otp) => {
 };
 
 // ✅ Export functions properly
+const sendPasswordResetEmail = async (email, resetUrl) => {
+  const mailOptions = {
+    to: email,
+    subject: 'Password Reset - Secure Key Management',
+    html: `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .button { 
+      display: inline-block; 
+      padding: 10px 20px; 
+      background-color: #646cff; 
+      color: white; 
+      text-decoration: none; 
+      border-radius: 4px; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Password Reset Request</h2>
+    <p>You requested a password reset for your Secure Key Management account.</p>
+    <p>Click the button below to reset your password (link expires in 1 hour):</p>
+    <p><a href="${resetUrl}" class="button">Reset Password</a></p>
+    <p>If you didn't request this, please ignore this email.</p>
+  </div>
+</body>
+</html>`
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 module.exports = {
   sendVerificationEmail,
   sendLoginOTP,
+  sendPasswordResetEmail
 };

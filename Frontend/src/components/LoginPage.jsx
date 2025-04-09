@@ -9,13 +9,15 @@ import { Label } from "@/components/ui/label"
 import { Link, useNavigate } from "react-router-dom"
 import { Navbar } from "./Navbar"
 import { Shield, Key, Lock } from "lucide-react"
+import api from "../api";
 
-export function LoginPage() {
+export function LoginPage({ onLogin, onOtpVerified }) {
   const [formData, setFormData] = useState({ email: "", password: "" })
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [error, setError] = useState("")
+  const [userId, setUserId] = useState(null) // Add this line to store userId
   const navigate = useNavigate()
   const otpInputRefs = Array(6)
     .fill(0)
@@ -43,32 +45,60 @@ export function LoginPage() {
     }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
 
-    try {
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      if (step === 1) {
-        setStep(2) // Move to OTP step
-        // Focus the first OTP input after a short delay
-        setTimeout(() => {
-          otpInputRefs[0].current.focus()
-        }, 100)
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+
+  try {
+    if (step === 1) {
+      // Step 1: Login with email and password
+      const response = await api.post("/login", formData);
+      console.log("Login Step 1 Success:", response.data);
+      setUserId(response.data.userId); // Store userId from response
+      setStep(2);
+
+      // Focus first OTP input if ref exists
+      setTimeout(() => {
+        if (otpInputRefs[0]?.current) {
+          otpInputRefs[0].current.focus();
+        }
+      }, 100);
+    } else {
+      // Step 2: Send OTP for verification
+      const otpCode = otp.join("");
+      const response = await api.post("/verify-login-otp", {
+        userId: userId,
+        otp: otpCode,
+      });
+
+      console.log("Full OTP Verification Response:", {
+        status: response.status,
+        data: response.data,
+        headers: response.headers
+      });
+      if (response.data && response.data.token) {
+        console.log("Token received - Storing in localStorage and updating state");
+        localStorage.setItem('authToken', response.data.token);
+        console.log("LocalStorage authToken:", localStorage.getItem('authToken'));
+        onOtpVerified();
+        console.log("Navigation to dashboard initiated");
+        navigate("/dashboard");
       } else {
-        console.log("Login successful", { ...formData, otp: otp.join("") })
-        navigate("/dashboard")
+        console.error("No token in response", response.data);
+        setError("OTP verification failed - no token received");
       }
-    } catch (err) {
-      console.error("Login error:", err)
-      setError("An error occurred during login. Please try again.")
-    } finally {
-      setLoading(false)
     }
+  } catch (err) {
+    console.error("Error:", err);
+    setError(err.response?.data?.message || "Login failed. Please try again.");
+  } finally {
+    setLoading(false);
   }
+};
+
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600">

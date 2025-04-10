@@ -4,10 +4,11 @@ import { useState } from "react"
 import { toast } from 'react-hot-toast'
 import api from '../api'
 import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { PasswordInput } from "./ui/password-input"
+import { Card } from "./ui/card"
+import { Label } from "./ui/label"
 import { Link } from "react-router-dom"
 import { Navbar } from "./Navbar"
 import { Shield, Key, Lock } from 'lucide-react'
@@ -42,7 +43,7 @@ const steps = [
 const stepValidation = {
   1: z.object({
     firstName: z.string().min(2, "First name must be at least 2 characters"),
-    lastName: z.string().min(2, "Last name must be at least 2 characters"),
+    lastName: z.string().min(3, "Last name must be at least 3 characters"),
     dateOfBirth: z.string().refine((date) => {
       const age = (new Date().getFullYear() - new Date(date).getFullYear())
       return age >= 18
@@ -63,50 +64,7 @@ const stepValidation = {
   }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  }).superRefine((data, ctx) => {
-    if (data.password !== data.confirmPassword) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Passwords do not match",
-        path: ["confirmPassword"]
-      });
-    }
-    if (!/[A-Z]/.test(data.password)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Password must contain at least 1 uppercase letter",
-        path: ["password"]
-      });
-    }
-    if (!/[a-z]/.test(data.password)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Password must contain at least 1 lowercase letter",
-        path: ["password"]
-      });
-    }
-    if (!/[0-9]/.test(data.password)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Password must contain at least 1 number",
-        path: ["password"]
-      });
-    }
-    if (!/[^A-Za-z0-9]/.test(data.password)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Password must contain at least 1 special character",
-        path: ["password"]
-      });
-    }
-    if (data.password.length < 8) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Password must be at least 8 characters long",
-        path: ["password"]
-      });
-    }
-  }),
+  })
 }
 
 export function RegisterPage() {
@@ -120,9 +78,29 @@ export function RegisterPage() {
     password: "",
     confirmPassword: "",
   })
-
-  // Update your form state to include validation errors
   const [errors, setErrors] = useState({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [passwordErrors, setPasswordErrors] = useState([])
+
+  const validatePassword = (pwd) => {
+    const passwordSchema = z.string()
+      .min(8, "Must be at least 8 characters")
+      .regex(/[A-Z]/, "1 uppercase letter")
+      .regex(/[a-z]/, "1 lowercase letter")
+      .regex(/[0-9]/, "1 number")
+      .regex(/[^A-Za-z0-9]/, "1 special character")
+    
+    try {
+      passwordSchema.parse(pwd)
+      setPasswordErrors([])
+      return true
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setPasswordErrors(error.errors.map(err => err.message))
+      }
+      return false
+    }
+  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -141,33 +119,9 @@ export function RegisterPage() {
         const formattedErrors = {}
         error.errors.forEach((err) => {
           formattedErrors[err.path[0]] = [err.message]
-          // Show toast for password mismatch
-          if (err.path[0] === 'confirmPassword' && err.message === "Passwords don't match") {
-            toast.error("Passwords don't match", {
-              position: 'top-center',
-              style: {
-                background: '#ff4444',
-                color: '#fff',
-                padding: '16px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                borderLeft: '4px solid #ff0000'
-              },
-              icon: '🔒',
-              duration: 3000
-            })
-          }
         })
         setErrors(formattedErrors)
-        
-        // Scroll to first error
-        const firstError = Object.keys(formattedErrors)[0]
-        if (firstError) {
-          document.getElementById(firstError)?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          })
-        }
+        return false
       }
       return false
     }
@@ -194,8 +148,8 @@ export function RegisterPage() {
     if (currentStep < steps.length - 1) {
       nextStep()
     } else {
+      setIsSubmitting(true)
       try {
-        // Map form data to backend expectations
         const registrationData = {
           fullname: {
             firstname: formData.firstName,
@@ -208,33 +162,20 @@ export function RegisterPage() {
         }
 
         const response = await api.post('/register', registrationData)
-        console.log("Registration successful:", response.data)
-        // You might want to redirect to login or show success message
-        setCurrentStep(steps.length) // Show completion step
+        setCurrentStep(steps.length)
       } catch (error) {
-        console.error("Registration failed:", error.response?.data || error.message)
-        // Handle error - show to user
         const errorMsg = error.response?.data?.errors?.[0]?.msg || 
                        error.response?.data?.message || 
                        "Registration failed. Please try again."
-        
-        toast.error(errorMsg, {
-          position: 'top-center',
-          style: {
-            background: '#ff4444',
-            color: '#fff',
-            padding: '16px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-          }
-        })
+        toast.error(errorMsg)
+      } finally {
+        setIsSubmitting(false)
       }
     }
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600">
-      {/* Decorative Elements */}
       <div className="absolute inset-0 pointer-events-none">
         <Key className="absolute top-20 left-20 w-32 h-32 text-white/10 rotate-45" />
         <Lock className="absolute bottom-20 right-20 w-32 h-32 text-white/10 -rotate-12" />
@@ -255,29 +196,6 @@ export function RegisterPage() {
               </p>
             </div>
 
-            {/* Enhanced Step Indicator */}
-            <div className="flex items-center justify-center mb-8">
-              <div className="flex items-center space-x-4">
-                {steps.map((step) => (
-                  <div key={step.id} className="flex items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        step.id <= currentStep
-                          ? "bg-purple-600 text-white"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {step.id}
-                    </div>
-                    {step.id < steps.length && (
-                      <div className={`w-16 h-1 ${step.id < currentStep ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Form Steps */}
             <form onSubmit={handleSubmit}>
               <AnimatePresence mode="wait">
                 <motion.div
@@ -288,6 +206,7 @@ export function RegisterPage() {
                   transition={{ duration: 0.3 }}
                   className="space-y-4"
                 >
+                  {/* Step 1: Personal Info */}
                   {currentStep === 1 && (
                     <>
                       <div className="grid grid-cols-2 gap-4">
@@ -326,6 +245,7 @@ export function RegisterPage() {
                     </>
                   )}
 
+                  {/* Step 2: Contact Info */}
                   {currentStep === 2 && (
                     <>
                       <div className="space-y-2">
@@ -336,11 +256,7 @@ export function RegisterPage() {
                           type="email"
                           value={formData.email}
                           onChange={handleChange}
-                          className={errors.email ? "border-red-500" : ""}
                         />
-                        {errors.email && (
-                          <p className="text-sm text-red-500">{errors.email[0]}</p>
-                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
@@ -348,41 +264,42 @@ export function RegisterPage() {
                           country={'us'}
                           value={formData.phone}
                           onChange={(phone) => setFormData({ ...formData, phone })}
-                          containerClass="w-full"
-                          inputClass={`w-full p-2 border rounded-md ${
-                            errors.phone ? "border-red-500" : "border-input"
-                          }`}
                         />
-                        {errors.phone && (
-                          <p className="text-sm text-red-500">{errors.phone[0]}</p>
-                        )}
                       </div>
                     </>
                   )}
 
+                  {/* Step 3: Security */}
                   {currentStep === 3 && (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                          id="password"
-                          name="password"
-                          type="password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          className={errors.password ? "border-red-500" : ""}
-                          required
-                        />
-                        {errors.password && (
-                          <p className="text-sm text-red-500">{errors.password[0]}</p>
-                        )}
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <PasswordInput
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={(e) => {
+                        handleChange(e)
+                        validatePassword(e.target.value)
+                      }}
+                      required
+                    />
+                    {passwordErrors.length > 0 && (
+                      <div className="mt-2 text-sm text-red-500">
+                        <p>Password must contain:</p>
+                        <ul className="list-disc pl-5">
+                          {passwordErrors.map((err, i) => (
+                            <li key={i}>{err}</li>
+                          ))}
+                        </ul>
                       </div>
+                    )}
+                  </div>
                       <div className="space-y-2">
                         <Label htmlFor="confirmPassword">Confirm Password</Label>
-                        <Input
+                        <PasswordInput
                           id="confirmPassword"
                           name="confirmPassword"
-                          type="password"
                           value={formData.confirmPassword}
                           onChange={handleChange}
                           required
@@ -391,6 +308,7 @@ export function RegisterPage() {
                     </>
                   )}
 
+                  {/* Step 4: Complete */}
                   {currentStep === 4 && (
                     <div className="text-center py-8">
                       <motion.div
@@ -412,9 +330,6 @@ export function RegisterPage() {
                           Go to Login
                         </Link>
                       </div>
-                      {errors.apiError && (
-                        <p className="text-sm text-red-500">{errors.apiError}</p>
-                      )}
                     </div>
                   )}
                 </motion.div>
@@ -426,7 +341,6 @@ export function RegisterPage() {
                     type="button"
                     variant="outline"
                     onClick={prevStep}
-                    className="hover:bg-purple-50"
                     disabled={currentStep === 1}
                   >
                     Previous
@@ -436,7 +350,8 @@ export function RegisterPage() {
                     onClick={currentStep === steps.length - 1 ? undefined : nextStep}
                     className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:opacity-90"
                   >
-                    {currentStep === steps.length - 1 ? "Submit" : "Next"}
+                    {isSubmitting ? "Processing..." : 
+                     currentStep === steps.length - 1 ? "Submit" : "Next"}
                   </Button>
                 </div>
               )}

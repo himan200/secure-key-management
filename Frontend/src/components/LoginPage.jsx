@@ -2,10 +2,11 @@
 
 import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { PasswordInput } from "./ui/password-input"
+import { Card } from "./ui/card"
+import { Label } from "./ui/label"
 import { Link, useNavigate } from "react-router-dom"
 import { Navbar } from "./Navbar"
 import { Shield, Key, Lock } from "lucide-react"
@@ -17,7 +18,7 @@ export function LoginPage({ onLogin, onOtpVerified }) {
   const [step, setStep] = useState(1)
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [error, setError] = useState("")
-  const [userId, setUserId] = useState(null) // Add this line to store userId
+  const [userId, setUserId] = useState(null)
   const navigate = useNavigate()
   const otpInputRefs = Array(6)
     .fill(0)
@@ -32,77 +33,86 @@ export function LoginPage({ onLogin, onOtpVerified }) {
     newOtp[index] = value
     setOtp(newOtp)
 
-    // Auto-focus next input
     if (value && index < 5) {
       otpInputRefs[index + 1].current.focus()
     }
   }
 
   const handleKeyDown = (index, e) => {
-    // Handle backspace
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpInputRefs[index - 1].current.focus()
     }
   }
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
+    try {
+      if (step === 1) {
+        const response = await api.post("/login", formData);
+        console.log("Login Step 1 Success:", response.data);
+        setUserId(response.data.userId);
+        setStep(2);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
-
-  try {
-    if (step === 1) {
-      // Step 1: Login with email and password
-      const response = await api.post("/login", formData);
-      console.log("Login Step 1 Success:", response.data);
-      setUserId(response.data.userId); // Store userId from response
-      setStep(2);
-
-      // Focus first OTP input if ref exists
-      setTimeout(() => {
-        if (otpInputRefs[0]?.current) {
-          otpInputRefs[0].current.focus();
-        }
-      }, 100);
-    } else {
-      // Step 2: Send OTP for verification
-      const otpCode = otp.join("");
-      const response = await api.post("/verify-login-otp", {
-        userId: userId,
-        otp: otpCode,
-      });
-
-      console.log("Full OTP Verification Response:", {
-        status: response.status,
-        data: response.data,
-        headers: response.headers
-      });
-      if (response.data && response.data.token) {
-        console.log("Token received - Storing in localStorage and updating state");
-        localStorage.setItem('authToken', response.data.token);
-        console.log("LocalStorage authToken:", localStorage.getItem('authToken'));
-        onOtpVerified();
-        console.log("Navigation to dashboard initiated");
-        navigate("/dashboard");
+        setTimeout(() => {
+          if (otpInputRefs[0]?.current) {
+            otpInputRefs[0].current.focus();
+          }
+        }, 100);
       } else {
-        console.error("No token in response", response.data);
-        setError("OTP verification failed - no token received");
-      }
-    }
-  } catch (err) {
-    console.error("Error:", err);
-    setError(err.response?.data?.message || "Login failed. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+        const otpCode = otp.join("");
+        const response = await api.post("/verify-login-otp", {
+          userId: userId,
+          otp: otpCode,
+        });
 
+        console.log("Full OTP Verification Response:", {
+          status: response.status,
+          data: response.data,
+          headers: response.headers
+        });
+        if (response.data && response.data.token) {
+          console.log("Token received - Storing in localStorage and updating state");
+          localStorage.setItem('authToken', response.data.token);
+          console.log("LocalStorage authToken:", localStorage.getItem('authToken'));
+          onOtpVerified();
+          console.log("Navigation to dashboard initiated");
+          navigate("/dashboard");
+        } else {
+          console.error("No token in response", response.data);
+          setError("OTP verification failed - no token received");
+        }
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      const errorResponse = err.response?.data;
+      
+      // Handle network errors or server down
+      if (!errorResponse) {
+        setError("Network error. Please check your connection.");
+        return;
+      }
+      
+      // Handle specific error cases from backend
+      switch(errorResponse.error) {
+        case 'EmailNotVerified':
+          setError(errorResponse.message || 'Please verify your email first.');
+          break;
+        case 'InvalidCredentials':
+          setError(errorResponse.message || 'Invalid email or password.');
+          break;
+        default:
+          setError(errorResponse.message || "Login failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600">
-      {/* Decorative Elements */}
       <div className="absolute inset-0 pointer-events-none">
         <Key className="absolute top-20 left-20 w-32 h-32 text-white/10 rotate-45" />
         <Lock className="absolute bottom-20 right-20 w-32 h-32 text-white/10 -rotate-12" />
@@ -151,10 +161,10 @@ const handleSubmit = async (e) => {
 
                         <div className="space-y-2">
                           <Label htmlFor="password">Password</Label>
-                          <Input
+                          <PasswordInput
+                          placeholder="Enter your password"
                             id="password"
                             name="password"
-                            type="password"
                             value={formData.password}
                             onChange={handleChange}
                             required
@@ -256,4 +266,3 @@ const handleSubmit = async (e) => {
 }
 
 export default LoginPage
-

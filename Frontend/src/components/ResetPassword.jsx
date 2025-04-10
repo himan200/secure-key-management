@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { PasswordInput } from "./ui/password-input";
 import { Card } from "./ui/card";
 import { Label } from "./ui/label";
 import { Navbar } from "./Navbar";
@@ -91,9 +92,8 @@ export default function ResetPassword() {
             <form onSubmit={handleSubmit} className="space-y-6 mt-6">
               <div>
                 <Label htmlFor="password">New Password</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -114,9 +114,8 @@ export default function ResetPassword() {
               </div>
               <div>
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

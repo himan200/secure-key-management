@@ -212,8 +212,45 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
   await transporter.sendMail(mailOptions);
 };
 
+const sendPasswordResetConfirmation = async (email) => {
+  const mailOptions = {
+    to: email,
+    subject: 'Password Reset Successful - Secure Key Management',
+    html: `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .success-message { 
+      color: #28a745;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Password Successfully Reset</h2>
+    <p class="success-message">Your Secure Key Management account password has been successfully reset.</p>
+    <p>If you did not make this change, please contact our support team immediately.</p>
+    <p>Thank you,<br>The Secure Key Management Team</p>
+  </div>
+</body>
+</html>`
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Password reset confirmation email sent to:', email);
+  } catch (error) {
+    console.error('Error sending password reset confirmation:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendLoginOTP,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendPasswordResetConfirmation
 };

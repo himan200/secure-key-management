@@ -75,14 +75,23 @@ const loginUser = async (req, res) => {
 
 
     if (!user)
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ 
+        error: 'InvalidCredentials',
+        message: 'Invalid email or password' 
+      });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ 
+        error: 'InvalidCredentials', 
+        message: 'Invalid email or password' 
+      });
 
     if (!user.isVerified)
-      return res.status(400).json({ error: 'Please verify your email first.' });
+      return res.status(400).json({ 
+        error: 'EmailNotVerified',
+        message: 'Please verify your email first. Check your inbox or Spam folder.' 
+      });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -218,17 +227,45 @@ const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
 
-    if (!token) {
+    if (!token || !password) {
       return res.status(400).json({ 
-        error: 'Reset token is required' 
+        error: 'Token and new password are required' 
       });
     }
 
-    // Rest of your existing reset logic
+    const user = await usermodel.findOne({ 
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ 
+        error: 'Invalid or expired reset token' 
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    // Update user password and clear reset token
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    // Send confirmation email
+    await emailService.sendPasswordResetConfirmation(user.email);
+
+    return res.status(200).json({ 
+      success: true,
+      message: 'Password reset successfully'
+    });
+
   } catch (error) {
     console.error('Password reset error:', error);
     return res.status(500).json({ 
-      error: 'An error occurred during password reset' 
+      error: 'An error occurred during password reset',
+      details: error.message
     });
   }
 };

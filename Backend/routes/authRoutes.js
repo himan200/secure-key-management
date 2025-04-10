@@ -51,50 +51,39 @@ router.post(
     authController.forgotPassword
   );
 
-  // Reset password route
-  router.post('/reset-password',
-    [
-      body('token').notEmpty().withMessage('Token is required'),
-      body('password')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-        .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-        .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
-        .matches(/[0-9]/).withMessage('Password must contain at least one number')
-        .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character'),
-    ],
-    handleValidationErrors,
-    authController.resetPassword
-  );
+const authMiddleware = require('../middleware/auth');
 
-  let resetAttempts = new Map();
+// Reset password route
+router.post('/reset-password',
+  [
+    body('token').notEmpty().withMessage('Token is required'),
+    body('password')
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+      .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+      .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+      .matches(/[0-9]/).withMessage('Password must contain at least one number')
+      .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character'),
+  ],
+  handleValidationErrors,
+  authMiddleware.validateResetToken,
+  authController.resetPassword
+);
 
-const resetLimiter = (req, res, next) => {
-  const ip = req.headers.get('x-forwarded-for') || req.ip;
-  const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 minutes
-  
-  if (!resetAttempts.has(ip)) {
-    resetAttempts.set(ip, { count: 1, startTime: now });
-    return next();
-  }
+// Rate limiting middleware for password reset
+const rateLimit = require('express-rate-limit');
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: 'Too many password reset attempts, please try again later',
+  skipSuccessfulRequests: true
+});
 
-  const entry = resetAttempts.get(ip);
-  if (now - entry.startTime > windowMs) {
-    resetAttempts.set(ip, { count: 1, startTime: now });
-    return next();
-  }
-
-  if (entry.count >= 5) {
-    return new Response(JSON.stringify({ 
-      error: 'Too many reset attempts, please try again later' 
-    }), { 
-      status: 429,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  entry.count++;
-  next();
-};
+// Apply rate limiting to forgot password route
+router.post('/forgot-password', 
+  body('email').isEmail().withMessage('Invalid email'),
+  handleValidationErrors,
+  resetLimiter,
+  authController.forgotPassword
+);
 
 module.exports = router;

@@ -106,7 +106,7 @@ export function LandingPage() {
                 <Button
                   asChild
                   size="lg"
-                  className="bg-purple-600 text-white hover:bg-purple-700 transform transition-all duration-200 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-purple-500/50"
+                  className="bg-purple-600 text-white hover:bg-purple-700 hover:text-white transform transition-all duration-200 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-purple-500/50"
                 >
                   <Link to="/register" className="no-underline">
                     Get Started
@@ -116,7 +116,7 @@ export function LandingPage() {
                   asChild
                   size="lg"
                   variant="outline"
-                  className="bg-white/10 text-white hover:bg-white/20 transform transition-all duration-200 text-lg px-8 py-6 rounded-full border-0"
+                  className="bg-white/10 text-white hover:bg-white/20  transform transition-all duration-200 text-lg px-8 py-6 rounded-full border-0"
                 >
                   <Link to="/learn-more" className="no-underline">
                     Learn More
@@ -272,7 +272,7 @@ export function LandingPage() {
           <Button
             asChild
             size="lg"
-            className="bg-purple-600 text-white hover:bg-purple-700 transform transition-all duration-200 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-purple-500/50"
+            className="bg-purple-600 text-white hover:bg-purple-700 hover:text-white transform transition-all duration-200 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-purple-500/50"
           >
             <Link to="/register" className="no-underline text-inherit hover:no-underline">
               Get Started Now <ArrowRight className="ml-2" />

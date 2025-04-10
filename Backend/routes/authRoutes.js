@@ -86,4 +86,10 @@ router.post('/forgot-password',
   authController.forgotPassword
 );
 
+// Get current user route
+router.get('/me', 
+  authMiddleware.auth,
+  authController.getCurrentUser
+);
+
 module.exports = router;

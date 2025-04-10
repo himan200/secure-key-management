@@ -16,18 +16,24 @@ function App() {
     console.log("Initial auth check - Token exists:", !!token);
     return !!token;
   })
-  const [isOtpVerified, setIsOtpVerified] = useState(false)
+  const [isOtpVerified, setIsOtpVerified] = useState(() => {
+    const otpVerified = localStorage.getItem('otpVerified');
+    return otpVerified === 'true';
+  })
   const [userEmail, setUserEmail] = useState("")
 
   // Add authentication handlers
   const handleLogin = (email) => {
     setIsAuthenticated(true)
     setUserEmail(email)
+    localStorage.setItem('otpVerified', 'true');
   }
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('otpVerified');
     setIsAuthenticated(false);
+    setIsOtpVerified(false);
     setUserEmail("");
   }
 
@@ -35,7 +41,10 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage onLogin={handleLogin} onOtpVerified={() => setIsOtpVerified(true)} />} />
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} onOtpVerified={() => {
+          localStorage.setItem('otpVerified', 'true');
+          setIsOtpVerified(true);
+        }} />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -1,196 +1,267 @@
 "use client"
-
 import { useState, useEffect } from "react"
-import { Copy, RefreshCw, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Slider } from "@/components/ui/slider"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { Eye, EyeOff, Copy, Check, RefreshCw, ChevronDown } from "lucide-react"
 
 export function PasswordGenerator() {
+  // Core state
   const [password, setPassword] = useState("")
-  const [passwordLength, setPasswordLength] = useState(16)
+  const [length, setLength] = useState(12)
+  const [copied, setCopied] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [includeUppercase, setIncludeUppercase] = useState(true)
-  const [includeLowercase, setIncludeLowercase] = useState(true)
   const [includeNumbers, setIncludeNumbers] = useState(true)
   const [includeSymbols, setIncludeSymbols] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [passwordStrength, setPasswordStrength] = useState(0)
+  const [excludeChars, setExcludeChars] = useState("")
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
-  useEffect(() => {
-    generatePassword()
-  }, [])
+  // Enhancement states
+  const [strength, setStrength] = useState({
+    score: 0,
+    label: "Weak",
+    color: "bg-red-500"
+  })
+  const [history, setHistory] = useState([])
+  const [expiry, setExpiry] = useState(null)
 
-  useEffect(() => {
-    if (copied) {
-      const timeout = setTimeout(() => setCopied(false), 2000)
-      return () => clearTimeout(timeout)
-    }
-  }, [copied])
-
-  useEffect(() => {
-    calculatePasswordStrength()
-  }, [password])
+  // Password presets
+  const PRESETS = [
+    { name: "Basic", length: 12, uppercase: true, numbers: true, symbols: false },
+    { name: "Strong", length: 16, uppercase: true, numbers: true, symbols: true },
+    { name: "PIN", length: 6, uppercase: false, numbers: true, symbols: false }
+  ]
 
   const generatePassword = () => {
-    let charset = ""
-    if (includeLowercase) charset += "abcdefghijklmnopqrstuvwxyz"
-    if (includeUppercase) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    if (includeNumbers) charset += "0123456789"
-    if (includeSymbols) charset += "!@#$%^&*()_+-=[]{}|;:,.<>?"
-
-    if (charset === "") {
-      setIncludeLowercase(true)
-      charset = "abcdefghijklmnopqrstuvwxyz"
+    let chars = "abcdefghijklmnopqrstuvwxyz"
+    if (includeUppercase) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    if (includeNumbers) chars += "0123456789"
+    if (includeSymbols) chars += "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    if (excludeChars) {
+      chars = chars.split('').filter(c => !excludeChars.includes(c)).join('')
     }
 
-    let newPassword = ""
-    for (let i = 0; i < passwordLength; i++) {
-      const randomIndex = Math.floor(Math.random() * charset.length)
-      newPassword += charset[randomIndex]
+    let result = ""
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
-
-    setPassword(newPassword)
+    
+    setPassword(result)
+    calculateStrength(result)
+    setHistory(prev => [result, ...prev].slice(0, 5))
+    setExpiry(Date.now() + 300000) // 5 minutes expiry
   }
 
-  const calculatePasswordStrength = () => {
-    let strength = 0
-
-    // Length check
-    if (password.length >= 8) strength += 1
-    if (password.length >= 12) strength += 1
-    if (password.length >= 16) strength += 1
-
-    // Character variety checks
-    if (/[A-Z]/.test(password)) strength += 1
-    if (/[a-z]/.test(password)) strength += 1
-    if (/[0-9]/.test(password)) strength += 1
-    if (/[^A-Za-z0-9]/.test(password)) strength += 1
-
-    setPasswordStrength(strength)
-  }
-
-  const getStrengthLabel = () => {
-    if (passwordStrength <= 2) return "Weak"
-    if (passwordStrength <= 4) return "Moderate"
-    if (passwordStrength <= 6) return "Strong"
-    return "Very Strong"
-  }
-
-  const getStrengthColor = () => {
-    if (passwordStrength <= 2) return "bg-red-500"
-    if (passwordStrength <= 4) return "bg-yellow-500"
-    if (passwordStrength <= 6) return "bg-green-500"
-    return "bg-purple-500"
+  const calculateStrength = (pass) => {
+    let score = 0
+    if (pass.length >= 12) score++
+    if (/[A-Z]/.test(pass)) score++
+    if (/[0-9]/.test(pass)) score++
+    if (/[^A-Za-z0-9]/.test(pass)) score++
+    
+    let label, color
+    if (score <= 1) {
+      label = "Weak"
+      color = "bg-red-500"
+    } else if (score <= 3) {
+      label = "Medium" 
+      color = "bg-yellow-500"
+    } else {
+      label = "Strong"
+      color = "bg-green-500"
+    }
+    
+    setStrength({ score, label, color })
   }
 
   const copyToClipboard = () => {
+    if (!password) return
     navigator.clipboard.writeText(password)
     setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
+  useEffect(() => {
+    generatePassword()
+  }, [length, includeUppercase, includeNumbers, includeSymbols, excludeChars])
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Password Generator</h1>
+    <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-white">Password Generator</h2>
+        <button
+          onClick={generatePassword}
+          className="p-2 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors"
+          title="Regenerate"
+        >
+          <RefreshCw size={18} />
+        </button>
       </div>
 
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Generate a Secure Password</CardTitle>
-          <CardDescription>Create strong, unique passwords to keep your accounts safe</CardDescription>
-        </CardHeader>
+      {/* Password Display */}
+      <div className="relative mb-6">
+        <input
+          type={showPassword ? "text" : "password"}
+          value={password}
+          readOnly
+          className="w-full bg-slate-700 text-white px-4 py-3 pr-16 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+          <button
+            onClick={() => setShowPassword(!showPassword)}
+            className="p-2 text-slate-400 hover:text-white rounded-full"
+            title={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+          <button
+            onClick={copyToClipboard}
+            className="p-2 text-slate-400 hover:text-white rounded-full"
+            disabled={!password}
+            title="Copy to clipboard"
+          >
+            {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+          </button>
+        </div>
+      </div>
 
-        <CardContent className="space-y-6">
-          {/* Password Output */}
-          <div className="relative">
-            <Input value={password} readOnly className="pr-24 font-mono text-lg h-14" />
-            <div className="absolute right-2 top-2 flex space-x-1">
-              <Button variant="ghost" size="icon" onClick={generatePassword} className="h-10 w-10">
-                <RefreshCw size={18} />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-10 w-10">
-                {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
-              </Button>
-            </div>
+      {/* Strength Meter */}
+      <div className="mb-4">
+        <div className="flex justify-between text-sm text-slate-300 mb-1">
+          <span>Strength: {strength.label}</span>
+          <span>{strength.score}/4</span>
+        </div>
+        <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${strength.color} transition-all duration-300`}
+            style={{ width: `${(strength.score / 4) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Preset Buttons */}
+      <div className="flex gap-2 mb-4">
+        {PRESETS.map((preset, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              setLength(preset.length)
+              setIncludeUppercase(preset.uppercase)
+              setIncludeNumbers(preset.numbers)
+              setIncludeSymbols(preset.symbols)
+            }}
+            className="text-xs px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600 transition-colors"
+          >
+            {preset.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Length Slider */}
+      <div className="mb-6">
+        <div className="flex justify-between mb-2">
+          <label className="text-slate-300">Length: {length}</label>
+          <span className="text-emerald-400 font-medium">{length} characters</span>
+        </div>
+        <input
+          type="range"
+          min="8"
+          max="32"
+          value={length}
+          onChange={(e) => setLength(parseInt(e.target.value))}
+          className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+        />
+      </div>
+
+      {/* Character Options */}
+      <div className="space-y-3 mb-6">
+        <div 
+          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${includeUppercase ? 'bg-emerald-900/30 border-emerald-500' : 'bg-slate-700 border-slate-600'} border`}
+          onClick={() => setIncludeUppercase(!includeUppercase)}
+        >
+          <span className="text-slate-200">Uppercase Letters</span>
+          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${includeUppercase ? 'bg-emerald-500' : 'bg-slate-600 border border-slate-500'}`}>
+            {includeUppercase && <Check size={14} className="text-white" />}
           </div>
+        </div>
+        
+        <div 
+          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${includeNumbers ? 'bg-emerald-900/30 border-emerald-500' : 'bg-slate-700 border-slate-600'} border`}
+          onClick={() => setIncludeNumbers(!includeNumbers)}
+        >
+          <span className="text-slate-200">Numbers</span>
+          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${includeNumbers ? 'bg-emerald-500' : 'bg-slate-600 border border-slate-500'}`}>
+            {includeNumbers && <Check size={14} className="text-white" />}
+          </div>
+        </div>
+        
+        <div 
+          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${includeSymbols ? 'bg-emerald-900/30 border-emerald-500' : 'bg-slate-700 border-slate-600'} border`}
+          onClick={() => setIncludeSymbols(!includeSymbols)}
+        >
+          <span className="text-slate-200">Special Symbols</span>
+          <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${includeSymbols ? 'bg-emerald-500' : 'bg-slate-600 border border-slate-500'}`}>
+            {includeSymbols && <Check size={14} className="text-white" />}
+          </div>
+        </div>
+      </div>
 
-          {/* Password Strength Indicator */}
+      {/* Advanced Options */}
+      <button 
+        onClick={() => setAdvancedOpen(!advancedOpen)}
+        className="text-sm text-slate-400 hover:text-white flex items-center gap-1 mb-3"
+      >
+        {advancedOpen ? 'Hide' : 'Show'} Advanced Options
+        <ChevronDown size={16} className={`transition-transform ${advancedOpen ? 'rotate-180' : ''}`}/>
+      </button>
+
+      {advancedOpen && (
+        <div className="mb-6 p-3 bg-slate-700/50 rounded-lg">
+          <label className="block text-sm text-slate-300 mb-1">Exclude Characters</label>
+          <input
+            value={excludeChars}
+            onChange={(e) => setExcludeChars(e.target.value)}
+            className="w-full bg-slate-800 text-white px-3 py-2 rounded border border-slate-600"
+            placeholder="!@#$%"
+            maxLength={10}
+          />
+          <p className="text-xs text-slate-400 mt-1">Enter characters to exclude (max 10)</p>
+        </div>
+      )}
+
+      {/* Generate Button */}
+      <button
+        onClick={generatePassword}
+        className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 mb-4"
+      >
+        <RefreshCw size={16} />
+        Generate New Password
+      </button>
+
+      {/* Expiry Timer */}
+      {expiry && (
+        <div className="text-sm text-slate-400 text-center">
+          Password expires in: {Math.max(0, Math.ceil((expiry - Date.now())/60000))} minutes
+        </div>
+      )}
+
+      {/* Password History */}
+      {history.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-slate-400 mb-2">Recent Passwords</h3>
           <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Password Strength</span>
-              <span className="text-sm font-medium">{getStrengthLabel()}</span>
-            </div>
-            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${getStrengthColor()} transition-all duration-300`}
-                style={{ width: `${(passwordStrength / 7) * 100}%` }}
-              ></div>
-            </div>
+            {history.map((pass, i) => (
+              <div key={i} className="flex items-center justify-between bg-slate-700/50 p-2 rounded">
+                <span className="font-mono text-sm">{pass}</span>
+                <button 
+                  onClick={() => navigator.clipboard.writeText(pass)}
+                  className="p-1 text-slate-400 hover:text-white"
+                >
+                  <Copy size={14}/>
+                </button>
+              </div>
+            ))}
           </div>
-
-          {/* Password Length */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="password-length">Password Length</Label>
-              <span className="text-sm font-medium">{passwordLength} characters</span>
-            </div>
-            <Slider
-              id="password-length"
-              min={8}
-              max={32}
-              step={1}
-              value={[passwordLength]}
-              onValueChange={(value) => setPasswordLength(value[0])}
-            />
-          </div>
-
-          {/* Character Types */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium">Character Types</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="uppercase" className="flex-1">
-                  Uppercase Letters (A-Z)
-                </Label>
-                <Switch id="uppercase" checked={includeUppercase} onCheckedChange={setIncludeUppercase} />
-              </div>
-
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="lowercase" className="flex-1">
-                  Lowercase Letters (a-z)
-                </Label>
-                <Switch id="lowercase" checked={includeLowercase} onCheckedChange={setIncludeLowercase} />
-              </div>
-
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="numbers" className="flex-1">
-                  Numbers (0-9)
-                </Label>
-                <Switch id="numbers" checked={includeNumbers} onCheckedChange={setIncludeNumbers} />
-              </div>
-
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="symbols" className="flex-1">
-                  Special Characters (!@#$%)
-                </Label>
-                <Switch id="symbols" checked={includeSymbols} onCheckedChange={setIncludeSymbols} />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-
-        <CardFooter>
-          <Button onClick={generatePassword} className="w-full">
-            <RefreshCw size={16} className="mr-2" />
-            Generate New Password
-          </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }
-

@@ -4,20 +4,20 @@ const crypto = require('crypto');
 
 
 
-module.exports.createUser = async ({ firstname, lastname, date_of_birth, email, password, verificationToken, verificationExpires, isverified }) => {
-  const existingUser = await User.findOne({ email });
+module.exports.createUser = async (userData) => {
+  const existingUser = await User.findOne({ email: userData.email });
   if (existingUser) {
     throw new Error('User already exists');
   }
 
   const newUser = new User({
-    fullname: { firstname, lastname },
-    date_of_birth,
-    email,
-    password,
-    verificationToken,     // 👈 use what was passed
-    verificationExpires,   // 👈 use what was passed
-    isverified
+    fullname: userData.fullname,
+    date_of_birth: userData.date_of_birth,
+    email: userData.email,
+    password: userData.password,
+    verificationToken: userData.verificationToken,
+    verificationExpires: userData.verificationExpires,
+    isVerified: userData.isVerified
   });
 
   await newUser.save();

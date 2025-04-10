@@ -25,8 +25,8 @@ const registerUser = async (req, res, next) => {
 
     if (user) {
       // Update existing unverified user
-      user.firstname = fullname.firstname;
-      user.lastname = fullname.lastname;
+      user.fullname.firstname = fullname.firstname;
+      user.fullname.lastname = fullname.lastname;
       user.date_of_birth = date_of_birth;
       user.password = hashedPassword;
       user.verificationToken = verificationToken;
@@ -34,9 +34,27 @@ const registerUser = async (req, res, next) => {
       await user.save();
     } else {
       // Create new user
+      // Verify names exist before creating user
+      if (!fullname?.firstname || !fullname?.lastname) {
+        return res.status(400).json({ 
+          error: 'NameRequired',
+          message: 'First name and last name are required' 
+        });
+      }
+
+      // Verify names exist before creating user
+      if (!fullname?.firstname?.trim() || !fullname?.lastname?.trim()) {
+        return res.status(400).json({ 
+          error: 'NameRequired',
+          message: 'First name and last name are required' 
+        });
+      }
+
       user = await authservice.createUser({
-        firstname: fullname.firstname,
-        lastname: fullname.lastname,
+        fullname: {
+          firstname: fullname.firstname.trim(),
+          lastname: fullname.lastname.trim()
+        },
         date_of_birth,
         email,
         phone,
@@ -47,9 +65,15 @@ const registerUser = async (req, res, next) => {
       });
     }
 
+    console.log("New user created:", {
+      _id: user._id,
+      fullname: user.fullname,
+      email: user.email
+    });
+    
     const baseUrl = process.env.FRONTEND_URL.trim();
     const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
-    console.log("Verification URL:", verificationUrl); // 👈 URL logged here
+    console.log("Verification URL:", verificationUrl);
 
     await emailService.sendVerificationEmail(user.email, verificationUrl);
 
@@ -270,11 +294,47 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Controller to get current user data
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = await usermodel.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    console.log('Full user object from DB:', {
+      _id: user._id,
+      fullname: user.fullname,
+      email: user.email
+    });
+    
+    const response = {
+      firstName: user.fullname?.firstname || '',
+      lastName: user.fullname?.lastname || '',
+      email: user.email,
+      _debug: {
+        hasFullname: !!user.fullname,
+        hasFirstname: !!user.fullname?.firstname,
+        hasLastname: !!user.fullname?.lastname
+      }
+    };
+    // Ensure we're not returning null names
+    if (!response.firstName && !response.lastName) {
+      console.warn('No names found for user:', user._id);
+    }
+    console.log('API response being sent:', response);
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   verify,
   verifyLoginOtp,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  getCurrentUser
 };

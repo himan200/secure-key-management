@@ -150,11 +150,22 @@ export function RegisterPage() {
     } else {
       setIsSubmitting(true)
       try {
-        const registrationData = {
-          fullname: {
-            firstname: formData.firstName,
-            lastname: formData.lastName
-          },
+      // Validate and trim names
+      if (!formData.firstName?.trim() || !formData.lastName?.trim()) {
+        toast.error('First name and last name are required');
+        return;
+      }
+      
+      if (formData.firstName.trim().length < 2 || formData.lastName.trim().length < 3) {
+        toast.error('First name must be at least 2 characters and last name at least 3 characters');
+        return;
+      }
+
+      const registrationData = {
+        fullname: {
+          firstname: formData.firstName.trim(),
+          lastname: formData.lastName.trim()
+        },
           date_of_birth: formData.dateOfBirth,
           email: formData.email,
           phone: formData.phone,

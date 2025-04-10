@@ -1,128 +1,237 @@
-"use client"
-import { useState, useEffect } from "react"
-import { ShieldAlert, ShieldCheck, ExternalLink } from "lucide-react"
+import { useState } from 'react';
+import api from '../../api';
+import { AlertTriangle, ShieldAlert, Lock, Bell, RefreshCw } from 'lucide-react';
 
 export function DarkWebMonitor() {
-  const [scanResults, setScanResults] = useState(null)
-  const [isScanning, setIsScanning] = useState(false)
-  const [lastScanDate, setLastScanDate] = useState(null)
+  const [email, setEmail] = useState('');
+  const [breaches, setBreaches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  const runScan = async () => {
-    setIsScanning(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    const mockResults = {
-      compromised: Math.floor(Math.random() * 5),
-      scannedItems: 142,
-      newBreaches: 2,
-      details: [
-        { 
-          credential: "user@example.com",
-          breachSource: "Collection #1",
-          date: "2023-10-15",
-          severity: "high"
-        },
-        {
-          credential: "oldPassword123",
-          breachSource: "Recent Leak",
-          date: "2023-11-01", 
-          severity: "medium"
-        }
-      ]
+  const checkBreaches = async () => {
+    if (!email) {
+      setError('Please enter an email address');
+      return;
     }
-    
-    setScanResults(mockResults)
-    setLastScanDate(new Date())
-    setIsScanning(false)
-  }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setHasSubmitted(true);
+      const response = await api.get(`/breaches/${encodeURIComponent(email)}`);
+      if (response.data?.success && response.data?.breaches) {
+        setBreaches(response.data.breaches);
+      } else {
+        throw new Error(response.data?.error || 'Invalid response from server');
+      }
+    } catch (err) {
+      console.error('Breach check error:', err);
+      let errorMessage = 'Failed to check breaches.';
+      
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = 'API key invalid or missing. Contact administrator.';
+        } else if (err.response.status === 404) {
+          setBreaches([]);
+          errorMessage = 'No breaches found - your email appears secure!';
+        } else if (err.response.status === 429) {
+          errorMessage = 'Too many requests. Please try again later.';
+        } else {
+          errorMessage = `Server error: ${err.response.status}`;
+        }
+      } else if (err.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        errorMessage = err.message || 'Unknown error occurred';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-white">
-          Dark Web Monitoring
-        </h2>
-        <button
-          onClick={runScan}
-          disabled={isScanning}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50"
-        >
-          {isScanning ? 'Scanning...' : 'Run Scan'}
-        </button>
-      </div>
-
-      {scanResults ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-slate-700/50 p-4 rounded-lg border border-red-500/30">
-              <div className="text-red-400 font-medium flex items-center gap-2">
-                <ShieldAlert size={18} />
-                {scanResults.compromised} Compromised
-              </div>
-              <p className="text-sm text-slate-400 mt-1">Credentials found</p>
-            </div>
-            
-            <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
-              <div className="text-white font-medium">
-                {scanResults.scannedItems} Scanned
-              </div>
-              <p className="text-sm text-slate-400 mt-1">Total items checked</p>
-            </div>
-            
-            <div className="bg-slate-700/50 p-4 rounded-lg border border-amber-500/30">
-              <div className="text-amber-400 font-medium">
-                {scanResults.newBreaches} New
-              </div>
-              <p className="text-sm text-slate-400 mt-1">Recent breaches</p>
-            </div>
-          </div>
-
-          <div className="border border-slate-700 rounded-lg overflow-hidden">
-            <div className="bg-slate-700/50 p-3 border-b border-slate-700">
-              <h3 className="font-medium text-white">Compromised Items</h3>
-            </div>
-            <div className="divide-y divide-slate-700">
-              {scanResults.details.map((item, index) => (
-                <div key={index} className="p-3 flex justify-between items-center">
-                  <div>
-                    <div className="font-medium text-white">{item.credential}</div>
-                    <div className="text-sm text-slate-400">
-                      {item.breachSource} • {item.date}
-                    </div>
-                  </div>
-                  <a 
-                    href="#" 
-                    className="text-emerald-400 hover:text-emerald-300 text-sm flex items-center gap-1"
-                  >
-                    Details <ExternalLink size={14} />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-slate-700/50 rounded-lg p-8 text-center">
-          <ShieldCheck size={32} className="mx-auto text-slate-400 mb-3" />
-          <h3 className="text-white font-medium mb-1">No Scan Results</h3>
-          <p className="text-slate-400 mb-4">
-            Run a scan to check if any credentials have been exposed
+    <div className={`min-h-screen ${breaches.length > 0 ? 'bg-gradient-to-b from-red-800 to-red-900' : 'bg-gray-900'} text-white`}>
+      <div className="container mx-auto px-4 py-12 max-w-5xl">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">
+            {breaches.length > 0 ? (
+              <span className="flex items-center justify-center gap-2">
+                <AlertTriangle className="h-8 w-8 text-yellow-300" />
+                Oh no — pwned!
+              </span>
+            ) : (
+              'Dark Web Monitoring'
+            )}
+          </h1>
+          <p className="text-lg">
+            {breaches.length > 0 
+              ? `Pwned in ${breaches.length} data breach${breaches.length > 1 ? 'es' : ''}`
+              : 'Check if your email has been compromised in data breaches'}
           </p>
-          <button
-            onClick={runScan}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium"
+        </div>
+
+        {/* Email Input Section */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email address"
+            className="flex-1 px-5 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 outline-none text-gray-800 bg-white shadow-sm transition-all"
+          />
+          <button 
+            onClick={checkBreaches}
+            disabled={loading}
+            className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 transition-all transform hover:scale-105 flex items-center justify-center gap-2"
           >
-            Scan Dark Web
+            {loading ? (
+              <>
+                <RefreshCw className="animate-spin h-5 w-5" />
+                Scanning...
+              </>
+            ) : (
+              <>
+                <ShieldAlert className="h-5 w-5" />
+                Check Now
+              </>
+            )}
           </button>
         </div>
-      )}
 
-      {lastScanDate && (
-        <div className="text-xs text-slate-400 mt-4">
-          Last scanned: {lastScanDate.toLocaleString()}
-        </div>
-      )}
+        {/* Results Section */}
+        {error && (
+          <div className={`p-4 mb-6 rounded-xl ${error.includes('secure') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'} shadow-inner`}>
+            <div className="flex items-center">
+              {error.includes('secure') ? (
+                <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              )}
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Only show results if user has submitted */}
+        {hasSubmitted && (
+          <>
+            {/* Security Steps Section */}
+            {breaches.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center gap-2 justify-center mb-6">
+                  <Lock className="text-blue-300 h-6 w-6" />
+                  <h2 className="text-xl font-semibold">3 Steps to better security</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Step 1 */}
+                  <div className="bg-yellow-100 rounded-lg overflow-hidden text-gray-800">
+                    <div className="p-4 h-48 flex items-center justify-center bg-yellow-200">
+                      <Lock className="h-16 w-16 text-yellow-600" />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold mb-2">Step 1: Change Passwords</h3>
+                      <p>Immediately change passwords for any accounts using this email address.</p>
+                    </div>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="bg-yellow-100 rounded-lg overflow-hidden text-gray-800">
+                    <div className="p-4 h-48 flex items-center justify-center bg-yellow-200">
+                      <ShieldAlert className="h-16 w-16 text-yellow-600" />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold mb-2">Step 2: Enable 2FA</h3>
+                      <p>Set up two-factor authentication for all important accounts.</p>
+                    </div>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="bg-yellow-100 rounded-lg overflow-hidden text-gray-800">
+                    <div className="p-4 h-48 flex items-center justify-center bg-yellow-200">
+                      <Bell className="h-16 w-16 text-yellow-600" />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold mb-2">Step 3: Monitor Accounts</h3>
+                      <p>Watch for suspicious activity and consider credit monitoring.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Breaches Section */}
+            {breaches.length > 0 ? (
+              <div className="mt-12">
+                <h2 className="text-2xl font-bold mb-4">Breaches you were pwned in</h2>
+                <p className="mb-6">
+                  A "breach" is an incident where data has been unintentionally exposed to the public. Using unique passwords
+                  for each service helps ensure that a breach of one service doesn't put your other accounts at risk.
+                </p>
+
+                {breaches.map((breach) => (
+                  <div key={breach.Name} className="flex gap-4 mb-6 bg-red-950 p-4 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <div className="bg-white p-2 rounded-lg w-20 h-20 flex items-center justify-center">
+                        {breach.Name ? (
+                          <span className="text-red-500 font-bold text-xl">
+                            {breach.Name.split(' ').map(w => w[0]).join('').substring(0, 2)}
+                          </span>
+                        ) : (
+                          <AlertTriangle className="h-8 w-8 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-grow">
+                      <div>
+                      <span className="font-bold text-blue-300">{breach.Title || breach.Name || 'Unknown Breach'}</span>
+                      {breach.Description ? (
+                        <p className="mt-1 text-gray-300">{breach.Description}</p>
+                      ) : (
+                        <p className="mt-1 text-gray-400 italic">No detailed description provided by breach database</p>
+                      )}
+                      {breach.Domain && (
+                        <p className="mt-1 text-sm">
+                          <span className="font-medium">Domain:</span> {breach.Domain}
+                        </p>
+                      )}
+                      </div>
+                      {breach.BreachDate && (
+                        <div className="mt-1 text-sm text-gray-300">
+                          Breach Date: {new Date(breach.BreachDate).toLocaleDateString()}
+                        </div>
+                      )}
+                      {breach.DataClasses?.length > 0 && (
+                        <div className="mt-2 bg-blue-800 inline-block px-2 py-1 rounded text-sm">
+                          Compromised data: {breach.DataClasses.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-green-50 p-6 rounded-xl border border-green-200 shadow-inner text-center">
+                <div className="flex flex-col items-center">
+                  <svg className="w-12 h-12 text-green-500 mb-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <h3 className="text-xl font-bold text-green-800 mb-1">No Breaches Found</h3>
+                  <p className="text-green-700">Your email appears secure in our database</p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
-  )
+  );
 }

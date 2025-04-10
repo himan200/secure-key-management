@@ -5,6 +5,7 @@ const app = express();
 const cors =require('cors');
 const connectToDb = require('./db/db');
 const authRoutes = require('./routes/authRoutes');
+const breachRoutes = require('./routes/breachRoutes');
 
 connectToDb();
 
@@ -44,6 +45,7 @@ app.get('/',(req, res)=>{
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/breaches', breachRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -116,13 +116,6 @@ export function Dashboard() {
                           ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
                           : user?.email?.split('@')[0] || 'User'}
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        Debug: {JSON.stringify({
-                          firstName: user?.firstName,
-                          lastName: user?.lastName,
-                          email: user?.email
-                        })}
-                      </div>
                       {(!user?.firstName && !user?.lastName) && (
                         <div className="text-xs text-yellow-400 mt-1">
                           Names not available - using email

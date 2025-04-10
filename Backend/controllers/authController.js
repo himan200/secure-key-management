@@ -95,7 +95,16 @@ const registerUser = async (req, res, next) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await usermodel.findOne({ email }).select('+password');
+    const user = await usermodel.findOne({ 
+      email,
+      isVerified: true 
+    }).select('+password');
+    
+    console.log('Login attempt for:', {
+      email,
+      userExists: !!user,
+      isVerified: user?.isVerified
+    });
 
 
     if (!user)
@@ -158,7 +167,14 @@ const verifyLoginOtp = async (req, res) => {
 
     await LoginOTP.deleteMany({ user: userId });
 
-    const user = await usermodel.findById(userId);
+    const user = await usermodel.findOne({
+      _id: userId,
+      isVerified: true
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'User not found or not verified' });
+    }
     user.isOtpVerified = true;
     await user.save();
     

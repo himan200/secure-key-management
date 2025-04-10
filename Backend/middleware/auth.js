@@ -24,4 +24,34 @@ const auth = async (req, res, next) => {
   }
 };
 
+// Add this to auth.js
+const validateResetToken = async (req, res, next) => {
+  try {
+    const { token } = await req.json(); // Bun's native JSON parsing
+    const user = await User.findOne({ 
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid or expired reset token' 
+      }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (e) {
+    return new Response(JSON.stringify({ 
+      error: 'Server error during token validation' 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
 module.exports = auth;

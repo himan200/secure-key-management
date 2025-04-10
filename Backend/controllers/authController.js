@@ -217,36 +217,19 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
-    console.log('Received reset request with token:', token);
-    
-    // Find user by reset token
-    const user = await usermodel.findOne({ 
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() } 
-    });
-    
-    console.log('User found for token:', user ? user.email : 'No user found');
-    if (user) {
-      console.log('Token expires at:', new Date(user.resetPasswordExpires));
+
+    if (!token) {
+      return res.status(400).json({ 
+        error: 'Reset token is required' 
+      });
     }
 
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
-    }
-
-    // Update password and clear reset token
-    user.password = await bcrypt.hash(password, 12);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
-
-    res.status(200).json({ 
-      success: true,
-      message: 'Password updated successfully' 
-    });
+    // Rest of your existing reset logic
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Password reset error:', error);
+    return res.status(500).json({ 
+      error: 'An error occurred during password reset' 
+    });
   }
 };
 

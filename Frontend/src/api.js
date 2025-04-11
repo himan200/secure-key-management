@@ -102,4 +102,21 @@ export const forgotPassword = async (email) => {
   return api.post('/auth/forgot-password', { email });
 };
 
+// Password API functions
+export const getPasswords = async () => {
+  return api.get('/passwords');
+};
+
+export const createPassword = async (passwordData) => {
+  return api.post('/passwords', passwordData);
+};
+
+export const updatePassword = async (id, passwordData) => {
+  return api.put(`/passwords/${id}`, passwordData);
+};
+
+export const deletePassword = async (id) => {
+  return api.delete(`/passwords/${id}`);
+};
+
 export default api;

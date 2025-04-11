@@ -3,52 +3,12 @@
 import { useState, useEffect } from "react"
 import { Eye, EyeOff, Edit, Trash, Plus, Search, Copy, Check, Clock, Lock } from "lucide-react"
 
-// Mock data for demonstration
-const mockPasswords = [
-  {
-    id: "1",
-    title: "Gmail Account",
-    username: "user@gmail.com",
-    password: "StrongP@ssw0rd123",
-    website: "https://gmail.com",
-    notes: "Personal email account",
-    category: "Email",
-    lastUpdated: "2023-04-15T10:30:00Z",
-  },
-  {
-    id: "2",
-    title: "Facebook",
-    username: "user.name",
-    password: "Fb@ccount2023!",
-    website: "https://facebook.com",
-    notes: "",
-    category: "Social Media",
-    lastUpdated: "2023-03-22T14:45:00Z",
-  },
-  {
-    id: "3",
-    title: "Amazon",
-    username: "user@example.com",
-    password: "Sh0pp!ng#Secure",
-    website: "https://amazon.com",
-    notes: "Prime account",
-    category: "Shopping",
-    lastUpdated: "2023-05-01T09:15:00Z",
-  },
-  {
-    id: "4",
-    title: "Bank Account",
-    username: "user123",
-    password: "B@nk!ng$ecure2023",
-    website: "https://mybank.com",
-    notes: "Checking account login",
-    category: "Financial",
-    lastUpdated: "2023-04-28T16:20:00Z",
-  },
-]
+import { getPasswords, createPassword, updatePassword, deletePassword } from '../../api'
 
 export function PasswordStorage() {
   const [passwords, setPasswords] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [visiblePasswords, setVisiblePasswords] = useState({})
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -65,9 +25,29 @@ export function PasswordStorage() {
   const [copiedField, setCopiedField] = useState(null)
   const [activeCategory, setActiveCategory] = useState("All")
 
-  // Load mock data
+  // Load passwords from API
   useEffect(() => {
-    setPasswords(mockPasswords)
+    const fetchPasswords = async () => {
+      try {
+        setIsLoading(true)
+        const response = await getPasswords()
+        // Access the decrypted data from the response
+        const passwordsData = Array.isArray(response.data?.data) ? response.data.data : []
+        console.log('Fetched passwords:', passwordsData) // Debug log
+        setPasswords(passwordsData)
+        setError(null)
+      } catch (err) {
+        console.error('Failed to fetch passwords:', {
+          error: err,
+          response: err.response?.data
+        })
+        setError(err.response?.data?.error || 'Failed to load passwords. Please try again.')
+        setPasswords([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchPasswords()
   }, [])
 
   // Reset copied status
@@ -82,17 +62,20 @@ export function PasswordStorage() {
     setSearchTerm(e.target.value)
   }
 
-  const filteredPasswords = passwords.filter((password) => {
+  const filteredPasswords = Array.isArray(passwords) ? passwords.filter((password) => {
     const matchesSearch =
-      password.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      password.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      password.website.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      password.category.toLowerCase().includes(searchTerm.toLowerCase())
+      (password.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (password.username?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (password.website?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (password.category?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
     const matchesCategory = activeCategory === "All" || password.category === activeCategory
 
     return matchesSearch && matchesCategory
-  })
+  }).map(p => ({
+    ...p,
+    _id: p._id || p.id // Handle both _id and id cases
+  })) : []
 
   const togglePasswordVisibility = (id) => {
     setVisiblePasswords((prev) => ({
@@ -114,39 +97,63 @@ export function PasswordStorage() {
     }))
   }
 
-  const handleAddPassword = () => {
-    const newPassword = {
-      id: Date.now().toString(),
-      ...formData,
-      lastUpdated: new Date().toISOString(),
+  const handleAddPassword = async () => {
+    try {
+      setIsLoading(true)
+      const response = await createPassword(formData)
+      // Get the full list of passwords again to ensure we have the latest data
+      const updatedResponse = await getPasswords()
+      const updatedPasswords = Array.isArray(updatedResponse.data?.data) ? updatedResponse.data.data : []
+      setPasswords(updatedPasswords)
+      setFormData({
+        title: "",
+        username: "",
+        password: "",
+        website: "",
+        notes: "",
+        category: "Other",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      console.error('Failed to add password:', err)
+      setError('Failed to add password. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
-
-    setPasswords((prev) => [...prev, newPassword])
-    setFormData({
-      title: "",
-      username: "",
-      password: "",
-      website: "",
-      notes: "",
-      category: "Other",
-    })
-    setIsAddDialogOpen(false)
   }
 
-  const handleEditPassword = () => {
-    setPasswords((prev) =>
-      prev.map((password) =>
-        password.id === currentPassword.id
-          ? { ...password, ...formData, lastUpdated: new Date().toISOString() }
-          : password,
-      ),
-    )
-    setIsEditDialogOpen(false)
+  const handleEditPassword = async () => {
+    try {
+      setIsLoading(true)
+      const response = await updatePassword(currentPassword._id, formData)
+      setPasswords((prev) =>
+        prev.map((password) =>
+          password._id === currentPassword._id
+            ? response.data
+            : password
+        )
+      )
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      console.error('Failed to update password:', err)
+      setError('Failed to update password. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleDeletePassword = (id) => {
+  const handleDeletePassword = async (id) => {
     if (window.confirm("Are you sure you want to delete this password?")) {
-      setPasswords((prev) => prev.filter((password) => password.id !== id))
+      try {
+        setIsLoading(true)
+        await deletePassword(id)
+        setPasswords((prev) => prev.filter((password) => password._id !== id))
+      } catch (err) {
+        console.error('Failed to delete password:', err)
+        setError('Failed to delete password. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -161,6 +168,28 @@ export function PasswordStorage() {
       category: password.category,
     })
     setIsEditDialogOpen(true)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 text-red-300">
+        {error}
+        <button 
+          onClick={() => window.location.reload()} 
+          className="ml-4 px-3 py-1 bg-red-800/50 rounded hover:bg-red-800/70"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
 
   const categories = ["All", "Email", "Social Media", "Financial", "Shopping", "Work", "Other"]
@@ -264,7 +293,7 @@ export function PasswordStorage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredPasswords.map((password) => (
             <div
-              key={password.id}
+              key={password._id || password.id}
               className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="p-5">
@@ -290,7 +319,7 @@ export function PasswordStorage() {
                     </button>
                     <button
                       className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-slate-700"
-                      onClick={() => handleDeletePassword(password.id)}
+                      onClick={() => handleDeletePassword(password._id)}
                     >
                       <Trash size={16} />
                     </button>
@@ -302,12 +331,23 @@ export function PasswordStorage() {
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-slate-400">Username</div>
                     <div className="flex items-center">
-                      <div className="flex-1 truncate text-slate-200">{password.username}</div>
+                      <div className="flex-1 truncate text-slate-200">
+                        {visiblePasswords[`username-${password._id}`] ? password.username : "••••••••••••"}
+                      </div>
                       <button
                         className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700"
-                        onClick={() => handleCopy(password.username, `username-${password.id}`)}
+                        onClick={() => setVisiblePasswords(prev => ({
+                          ...prev,
+                          [`username-${password._id}`]: !prev[`username-${password._id}`]
+                        }))}
                       >
-                        {copiedField === `username-${password.id}` ? (
+                        {visiblePasswords[`username-${password._id}`] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      <button
+                        className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700"
+                        onClick={() => handleCopy(password.username, `username-${password._id}`)}
+                      >
+                        {copiedField === `username-${password._id}` ? (
                           <Check size={16} className="text-emerald-500" />
                         ) : (
                           <Copy size={16} />
@@ -321,19 +361,22 @@ export function PasswordStorage() {
                     <div className="text-xs font-medium text-slate-400">Password</div>
                     <div className="flex items-center">
                       <div className="flex-1 truncate font-mono text-slate-200">
-                        {visiblePasswords[password.id] ? password.password : "••••••••••••"}
+                        {visiblePasswords[`password-${password._id}`] ? password.password : "••••••••••••"}
                       </div>
                       <button
                         className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700"
-                        onClick={() => togglePasswordVisibility(password.id)}
+                        onClick={() => setVisiblePasswords(prev => ({
+                          ...prev,
+                          [`password-${password._id}`]: !prev[`password-${password._id}`]
+                        }))}
                       >
-                        {visiblePasswords[password.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {visiblePasswords[`password-${password._id}`] ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                       <button
                         className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700"
-                        onClick={() => handleCopy(password.password, `password-${password.id}`)}
+                        onClick={() => handleCopy(password.password, `password-${password._id}`)}
                       >
-                        {copiedField === `password-${password.id}` ? (
+                        {copiedField === `password-${password._id}` ? (
                           <Check size={16} className="text-emerald-500" />
                         ) : (
                           <Copy size={16} />
@@ -357,9 +400,9 @@ export function PasswordStorage() {
                         </a>
                         <button
                           className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700"
-                          onClick={() => handleCopy(password.website, `website-${password.id}`)}
+                          onClick={() => handleCopy(password.website, `website-${password._id}`)}
                         >
-                          {copiedField === `website-${password.id}` ? (
+                          {copiedField === `website-${password._id}` ? (
                             <Check size={16} className="text-emerald-500" />
                           ) : (
                             <Copy size={16} />

@@ -7,7 +7,7 @@ export function DarkWebMonitor() {
   const [breaches, setBreaches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [resultStatus, setResultStatus] = useState('idle'); // 'idle' | 'checking' | 'complete'
 
   const checkBreaches = async () => {
     if (!email) {
@@ -18,7 +18,7 @@ export function DarkWebMonitor() {
     try {
       setLoading(true);
       setError(null);
-      setHasSubmitted(true);
+      setResultStatus('checking');
       const response = await api.get(`/breaches/${encodeURIComponent(email)}`);
       if (response.data?.success && response.data?.breaches) {
         setBreaches(response.data.breaches);
@@ -33,8 +33,8 @@ export function DarkWebMonitor() {
         if (err.response.status === 401) {
           errorMessage = 'API key invalid or missing. Contact administrator.';
         } else if (err.response.status === 404) {
-          setBreaches([]);
           errorMessage = 'No breaches found - your email appears secure!';
+          setBreaches([]);
         } else if (err.response.status === 429) {
           errorMessage = 'Too many requests. Please try again later.';
         } else {
@@ -49,6 +49,7 @@ export function DarkWebMonitor() {
       setError(errorMessage);
     } finally {
       setLoading(false);
+      setResultStatus('complete');
     }
   };
 
@@ -121,7 +122,7 @@ export function DarkWebMonitor() {
         )}
 
         {/* Only show results if user has submitted */}
-        {hasSubmitted && (
+        {resultStatus === 'complete' && (
           <>
             {/* Security Steps Section */}
             {breaches.length > 0 && (
@@ -180,8 +181,35 @@ export function DarkWebMonitor() {
                 {breaches.map((breach) => (
                   <div key={breach.Name} className="flex gap-4 mb-6 bg-red-950 p-4 rounded-lg">
                     <div className="flex-shrink-0">
-                      <div className="bg-white p-2 rounded-lg w-20 h-20 flex items-center justify-center">
-                        {breach.Name ? (
+                      <div className="bg-white p-2 rounded-lg w-20 h-20 flex items-center justify-center overflow-hidden">
+                        {breach.Domain ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={`https://haveibeenpwned.com/Content/Images/PwnedLogos/${breach.Domain.toLowerCase().replace(/^www\./, '')}.png`}
+                              alt={breach.Name || 'Breach logo'}
+                              className="w-full h-full object-contain absolute"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                const fallback = document.createElement('div');
+                                fallback.className = 'w-full h-full flex items-center justify-center';
+                                fallback.innerHTML = breach.Name ? (
+                                  `<span class="text-red-500 font-bold text-xl">
+                                    ${breach.Name.split(' ').map(w => w[0]).join('').substring(0, 2)}
+                                  </span>`
+                                ) : (
+                                  '<svg class="h-8 w-8 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1 6h2v6h-2zm0 8h2v2h-2z"/></svg>'
+                                );
+                                e.target.parentNode.appendChild(fallback);
+                              }}
+                            />
+                            {/* Loading fallback initially hidden */}
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="text-red-500 font-bold text-xl">
+                                {breach.Name?.split(' ').map(w => w[0]).join('').substring(0, 2)}
+                              </span>
+                            </div>
+                          </div>
+                        ) : breach.Name ? (
                           <span className="text-red-500 font-bold text-xl">
                             {breach.Name.split(' ').map(w => w[0]).join('').substring(0, 2)}
                           </span>
@@ -198,20 +226,44 @@ export function DarkWebMonitor() {
                       ) : (
                         <p className="mt-1 text-gray-400 italic">No detailed description provided by breach database</p>
                       )}
-                      {breach.Domain && (
-                        <p className="mt-1 text-sm">
-                          <span className="font-medium">Domain:</span> {breach.Domain}
-                        </p>
-                      )}
                       </div>
-                      {breach.BreachDate && (
-                        <div className="mt-1 text-sm text-gray-300">
-                          Breach Date: {new Date(breach.BreachDate).toLocaleDateString()}
-                        </div>
-                      )}
+                      <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                        {breach.BreachDate && (
+                          <div className="text-gray-300">
+                            <span className="font-medium">Breach Date:</span> {new Date(breach.BreachDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      {breach.PwnCount !== undefined && (
+                          <div className="text-gray-300 col-span-2">
+                            <span className="font-medium">Accounts Affected:</span> 
+                            <span className="ml-1 font-bold text-red-400 text-lg">
+                              {typeof breach.PwnCount === 'number' 
+                                ? breach.PwnCount.toLocaleString() 
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                        )}
+                        {breach.Domain && (
+                          <div className="text-gray-300 col-span-2">
+                            <span className="font-medium">Affected Services:</span> 
+                            <span className="ml-1 font-medium text-blue-300">
+                              {breach.Domain.includes(',') 
+                                ? breach.Domain.split(',').map(d => d.trim()).join(', ') 
+                                : breach.Domain}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       {breach.DataClasses?.length > 0 && (
-                        <div className="mt-2 bg-blue-800 inline-block px-2 py-1 rounded text-sm">
-                          Compromised data: {breach.DataClasses.join(', ')}
+                        <div className="mt-2">
+                          <div className="font-medium text-gray-300 mb-1">Compromised Data:</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {breach.DataClasses.map((dataClass, index) => (
+                              <div key={index} className="bg-blue-800 px-2 py-1 rounded text-sm">
+                                {dataClass}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

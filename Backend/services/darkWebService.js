@@ -8,8 +8,9 @@ async function checkEmailForBreaches(email) {
       throw new Error('HIBP_API_KEY is missing from environment variables');
     }
 
+    console.log('Making request to HIBP API for email:', email);
     const response = await axios.get(
-      `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}`,
+      `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}`, 
       {
         headers: {
           'hibp-api-key': HIBP_API_KEY,
@@ -21,10 +22,24 @@ async function checkEmailForBreaches(email) {
       }
     );
 
+    console.log('Full API response:', JSON.stringify(response.data, null, 2));
+    const processedBreaches = response.data.map(breach => ({
+        Name: breach.Name,
+        Title: breach.Title,
+        Domain: breach.Domain,
+        BreachDate: breach.BreachDate,
+        Description: breach.Description,
+        DataClasses: breach.DataClasses,
+        IsVerified: breach.IsVerified,
+        IsFabricated: breach.IsFabricated,
+        IsSensitive: breach.IsSensitive,
+        PwnCount: breach.PwnCount || 'Unknown'
+    }));
+    console.log('Processed breaches:', processedBreaches);
     return {
       success: true,
       found: response.data.length > 0,
-      breaches: response.data
+      breaches: processedBreaches
     };
 
   } catch (error) {

@@ -131,14 +131,26 @@ export function PasswordGenerator() {
       console.log('Save password response:', response);
       toast.success("Password saved successfully!", {
         position: 'top-center',
-        duration: 2000
+        duration: 3000,
+        style: {
+          background: '#10b981',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: '8px'
+        }
       });
       setShowSaveModal(false);
     } catch (error) {
       console.error("Error saving password:", error);
       toast.error("Failed to save password. Please try again.", {
         position: 'top-center',
-        duration: 2000
+        duration: 3000,
+        style: {
+          background: '#ef4444',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: '8px'
+        }
       });
     } finally {
       setIsSaving(false)

@@ -27,22 +27,47 @@ class PasswordService {
 
     static async getPasswords(userId) {
         try {
-            return await Password.find({ user: userId })
+            const passwords = await Password.find({ user: userId })
                 .select('-__v')
                 .lean();
+            
+            // Decrypt each password's sensitive fields
+            return passwords.map(pwd => ({
+                ...pwd,
+                username: new Password(pwd).decryptUsername(),
+                password: new Password(pwd).decryptPassword()
+            }));
         } catch (error) {
+            console.error('Error in getPasswords:', error);
             throw new Error('Failed to fetch passwords');
         }
     }
 
     static async updatePassword(userId, passwordId, updateData) {
         try {
-            return await Password.findOneAndUpdate(
-                { _id: passwordId, user: userId },
-                { ...updateData, lastUpdated: Date.now() },
-                { new: true }
-            );
+            // First find the existing password
+            const existingPassword = await Password.findOne({ 
+                _id: passwordId, 
+                user: userId 
+            });
+            
+            if (!existingPassword) {
+                throw new Error('Password not found');
+            }
+
+            // Update fields and trigger encryption hooks
+            existingPassword.set(updateData);
+            existingPassword.lastUpdated = Date.now();
+            await existingPassword.save();
+            
+            // Return the decrypted document
+            return {
+                ...existingPassword.toObject(),
+                username: existingPassword.decryptUsername(),
+                password: existingPassword.decryptPassword()
+            };
         } catch (error) {
+            console.error('Error in updatePassword:', error);
             throw new Error('Failed to update password');
         }
     }

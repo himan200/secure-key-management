@@ -43,25 +43,10 @@ exports.getPasswords = async (req, res) => {
     try {
         const passwords = await PasswordService.getPasswords(req.user._id);
         
-        // Decrypt and transform passwords before sending to client
-        const decryptedPasswords = passwords.map(pw => {
-            const passwordDoc = new Password(pw);
-            return {
-                _id: pw._id,
-                title: pw.title,
-                username: passwordDoc.decryptUsername() || '',
-                password: passwordDoc.decryptPassword() || '',
-                website: pw.website,
-                notes: pw.notes,
-                category: pw.category,
-                lastUpdated: pw.lastUpdated
-            };
-        });
-
         res.status(200).json({
             success: true,
-            count: decryptedPasswords.length,
-            data: decryptedPasswords
+            count: passwords.length,
+            data: passwords
         });
     } catch (err) {
         res.status(500).json({

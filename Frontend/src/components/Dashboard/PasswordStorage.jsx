@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Eye, EyeOff, Edit, Trash, Plus, Search, Copy, Check, Clock, Lock } from "lucide-react"
 
 import { getPasswords, createPassword, updatePassword, deletePassword } from '../../api'
+import DeleteConfirmationModal from '../ui/DeleteConfirmationModal'
 
 export function PasswordStorage() {
   const [passwords, setPasswords] = useState([])
@@ -24,6 +25,8 @@ export function PasswordStorage() {
   })
   const [copiedField, setCopiedField] = useState(null)
   const [activeCategory, setActiveCategory] = useState("All")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [passwordToDelete, setPasswordToDelete] = useState(null)
 
   // Load passwords from API
   useEffect(() => {
@@ -126,13 +129,12 @@ export function PasswordStorage() {
     try {
       setIsLoading(true)
       const response = await updatePassword(currentPassword._id, formData)
-      setPasswords((prev) =>
-        prev.map((password) =>
-          password._id === currentPassword._id
-            ? response.data
-            : password
-        )
-      )
+      
+      // Force a complete refresh of passwords data
+      const updatedResponse = await getPasswords()
+      const updatedPasswords = Array.isArray(updatedResponse.data?.data) ? updatedResponse.data.data : []
+      setPasswords(updatedPasswords)
+      
       setIsEditDialogOpen(false)
     } catch (err) {
       console.error('Failed to update password:', err)
@@ -142,19 +144,23 @@ export function PasswordStorage() {
     }
   }
 
-  const handleDeletePassword = async (id) => {
-    if (window.confirm("Are you sure you want to delete this password?")) {
-      try {
-        setIsLoading(true)
-        await deletePassword(id)
-        setPasswords((prev) => prev.filter((password) => password._id !== id))
-      } catch (err) {
-        console.error('Failed to delete password:', err)
-        setError('Failed to delete password. Please try again.')
-      } finally {
-        setIsLoading(false)
-      }
+  const handleDeletePassword = async () => {
+    try {
+      setIsLoading(true)
+      await deletePassword(passwordToDelete)
+      setPasswords((prev) => prev.filter((password) => password._id !== passwordToDelete))
+      setIsDeleteDialogOpen(false)
+    } catch (err) {
+      console.error('Failed to delete password:', err)
+      setError('Failed to delete password. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  const openDeleteDialog = (id) => {
+    setPasswordToDelete(id)
+    setIsDeleteDialogOpen(true)
   }
 
   const openEditDialog = (password) => {
@@ -222,6 +228,11 @@ export function PasswordStorage() {
 
   return (
     <div className="space-y-6 text-white">
+      <DeleteConfirmationModal 
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeletePassword}
+      />
       {/* Header and Add Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -319,7 +330,7 @@ export function PasswordStorage() {
                     </button>
                     <button
                       className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-slate-700"
-                      onClick={() => handleDeletePassword(password._id)}
+                      onClick={() => openDeleteDialog(password._id)}
                     >
                       <Trash size={16} />
                     </button>

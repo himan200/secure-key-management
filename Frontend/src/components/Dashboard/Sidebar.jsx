@@ -21,16 +21,16 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }) {
 
   const menuItems = [
     {
-      id: "generator",
-      label: "Password Generator",
-      icon: <Key size={20} />,
-      path: "/dashboard/generator",
-    },
-    {
       id: "storage",
       label: "Password Storage",
       icon: <Lock size={20} />,
       path: "/dashboard/storage",
+    },
+    {
+      id: "generator",
+      label: "Password Generator",
+      icon: <Key size={20} />,
+      path: "/dashboard/generator",
     },
     {
       id: "strength",

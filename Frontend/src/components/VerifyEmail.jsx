@@ -33,7 +33,7 @@ const VerifyEmail = () => {
       }
 
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/verify-email?token=${token}`);
+        const res = await api.get(`/auth/verify-email?token=${token}`);
 
         setStatus("success")
         setMessage(res.data.message || "Email verified successfully!")

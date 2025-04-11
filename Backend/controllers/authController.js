@@ -167,24 +167,37 @@ const verifyLoginOtp = async (req, res) => {
 
     await LoginOTP.deleteMany({ user: userId });
 
-    const user = await usermodel.findOne({
-      _id: userId,
-      isVerified: true
-    });
+    const user = await usermodel.findOne({ _id: userId });
     
     if (!user) {
-      return res.status(400).json({ message: 'User not found or not verified' });
+      return res.status(400).json({ 
+        error: 'UserNotFound',
+        message: 'User not found' 
+      });
     }
+
+    if (!user.isVerified) {
+      return res.status(400).json({
+        error: 'EmailNotVerified',
+        message: 'Please verify your email first'
+      });
+    }
+
     user.isOtpVerified = true;
     await user.save();
     
     const token = await user.generateAuthToken();
+    console.log('OTP verification successful for:', user.email);
+    
     res.status(200).json({ 
+      success: true,
       message: 'OTP verified successfully', 
       token,
       user: {
         _id: user._id,
-        email: user.email
+        email: user.email,
+        fullname: user.fullname,
+        isVerified: user.isVerified
       }
     });
 

@@ -172,7 +172,7 @@ export function RegisterPage() {
           password: formData.password
         }
 
-        const response = await api.post('/register', registrationData)
+        const response = await api.post('/auth/register', registrationData)
         setCurrentStep(steps.length)
       } catch (error) {
         const errorMsg = error.response?.data?.errors?.[0]?.msg || 

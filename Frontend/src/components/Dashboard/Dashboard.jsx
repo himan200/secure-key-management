@@ -21,19 +21,38 @@ export function Dashboard() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const checkAuthAndFetchData = async () => {
       try {
         setLoading(true)
+        
+        // Check for auth token first
+        const authToken = localStorage.getItem('authToken')
+        if (!authToken) {
+          window.location.href = '/'
+          return
+        }
+
+        // Verify token is valid by fetching user data
         const userData = await getUserData()
+        if (!userData) {
+          localStorage.removeItem('authToken')
+          localStorage.removeItem('user')
+          window.location.href = '/'
+          return
+        }
+
         setUser(userData)
       } catch (error) {
-        console.error("Failed to fetch user data:", error)
-        setError(error.message || 'Failed to load user data')
+        console.error("Authentication check failed:", error)
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        window.location.href = '/'
       } finally {
         setLoading(false)
       }
     }
-    fetchUserData()
+    
+    checkAuthAndFetchData()
   }, [])
 
   useEffect(() => {

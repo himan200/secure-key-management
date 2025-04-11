@@ -1,9 +1,29 @@
-// Frontend/src/api.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api', // Your backend base URL
-  withCredentials: true // Important if you're using cookies or sessions
+  baseURL: 'http://localhost:4000/api',
+  withCredentials: true
+});
+
+// Add request interceptor to include auth token
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+// Add response interceptor to handle 401 errors
+api.interceptors.response.use(response => response, error => {
+  if (error.response?.status === 401) {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  }
+  return Promise.reject(error);
 });
 
 export const getUserData = async () => {
@@ -56,6 +76,30 @@ export const getUserData = async () => {
     console.error('Error fetching user data:', error);
     throw error;
   }
+};
+
+export const resetPassword = async (token, password) => {
+  return api.post('/auth/reset-password', { token, password });
+};
+
+export const register = async (registrationData) => {
+  return api.post('/auth/register', registrationData);
+};
+
+export const login = async (formData) => {
+  return api.post('/auth/login', formData);
+};
+
+export const verifyLoginOtp = async (userId, otp) => {
+  return api.post('/auth/verify-login-otp', { userId, otp });
+};
+
+export const verifyEmail = async (token) => {
+  return api.get(`/auth/verify-email?token=${token}`);
+};
+
+export const forgotPassword = async (email) => {
+  return api.post('/auth/forgot-password', { email });
 };
 
 export default api;

@@ -51,7 +51,7 @@ export function LoginPage({ onLogin, onOtpVerified }) {
 
     try {
       if (step === 1) {
-        const response = await api.post("/login", formData);
+        const response = await api.post("/auth/login", formData);
         console.log("Login Step 1 Success:", response.data);
         setUserId(response.data.userId);
         setStep(2);
@@ -63,7 +63,7 @@ export function LoginPage({ onLogin, onOtpVerified }) {
         }, 100);
       } else {
         const otpCode = otp.join("");
-        const response = await api.post("/verify-login-otp", {
+        const response = await api.post("/auth/verify-login-otp", {
           userId: userId,
           otp: otpCode,
         });
@@ -73,16 +73,31 @@ export function LoginPage({ onLogin, onOtpVerified }) {
           data: response.data,
           headers: response.headers
         });
-        if (response.data && response.data.token) {
+
+        if (response.data?.error === 'EmailNotVerified') {
+          setError("Please verify your email first");
+          setStep(1); // Return to login form
+          return;
+        }
+
+        if (response.data?.token) {
           console.log("Token received - Storing in localStorage and updating state");
           localStorage.setItem('authToken', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
           console.log("LocalStorage authToken:", localStorage.getItem('authToken'));
+          console.log("LocalStorage user:", localStorage.getItem('user'));
           onOtpVerified();
           console.log("Navigation to dashboard initiated");
-          navigate("/dashboard");
+          // Force full page reload to ensure all auth state is initialized
+          window.location.href = "/dashboard";
         } else {
           console.error("No token in response", response.data);
-          setError("OTP verification failed - no token received");
+          setError(response.data?.message || "OTP verification failed");
+          // Reset OTP fields
+          setOtp(["", "", "", "", "", ""]);
+          if (otpInputRefs[0]?.current) {
+            otpInputRefs[0].current.focus();
+          }
         }
       }
     } catch (err) {

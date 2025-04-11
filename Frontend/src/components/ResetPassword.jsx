@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Navbar } from "./Navbar";
 import { Shield, Key, Lock } from 'lucide-react';
 import { z } from 'zod';
-import api from '../api';
+import api, { resetPassword } from '../api';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -64,7 +64,7 @@ export default function ResetPassword() {
     }
     
     try {
-      const { data } = await api.post('/reset-password', { token, password });
+      const { data } = await resetPassword(token, password);
       setMessage(data.message || 'Password reset successfully');
     } catch (error) {
       console.error('Reset password error:', error);

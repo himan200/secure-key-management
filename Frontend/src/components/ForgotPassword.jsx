@@ -7,7 +7,7 @@ import { Navbar } from './Navbar';
 import { motion } from 'framer-motion';
 import { Shield, Key, Lock, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "./ui/alert";
-import api from '../api';
+import { forgotPassword } from '../api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -21,7 +21,7 @@ export default function ForgotPassword() {
     setError("");
 
     try {
-      const { data } = await api.post('/forgot-password', { email });
+      const { data } = await forgotPassword(email);
       setSuccess(true);
     } catch (err) {
       setError(err.response?.data?.error || "An error occurred. Please try again.");

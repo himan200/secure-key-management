@@ -1,6 +1,8 @@
 "use client"
 import { useState, useEffect } from "react"
-import { Eye, EyeOff, Copy, Check, RefreshCw, ChevronDown } from "lucide-react"
+import { Eye, EyeOff, Copy, Check, RefreshCw, ChevronDown, Save } from "lucide-react"
+import { createPassword } from '../../api'
+import toast from 'react-hot-toast'
 
 export function PasswordGenerator() {
   // Core state
@@ -13,6 +15,15 @@ export function PasswordGenerator() {
   const [includeSymbols, setIncludeSymbols] = useState(true)
   const [excludeChars, setExcludeChars] = useState("")
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveData, setSaveData] = useState({
+    title: "",
+    username: "",
+    website: "",
+    notes: "",
+    category: "Other"
+  })
 
   // Enhancement states
   const [strength, setStrength] = useState({
@@ -77,6 +88,61 @@ export function PasswordGenerator() {
     navigator.clipboard.writeText(password)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+      toast.success("Password copied to clipboard!", {
+        position: 'top-center',
+        duration: 2000
+      })
+  }
+
+  const handleSaveClick = () => {
+    if (!password) {
+      toast.error("Please generate a password first", {
+        position: 'top-center',
+        duration: 2000
+      })
+      return
+    }
+    setSaveData({
+      title: `Generated Password ${new Date().toLocaleDateString()}`,
+      username: "",
+      website: "",
+      notes: "",
+      category: "Other"
+    })
+    setShowSaveModal(true)
+  }
+
+  const savePassword = async () => {
+    if (!saveData.title) {
+      toast.error("Please enter a title", {
+        position: 'top-center', 
+        duration: 2000
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const passwordData = {
+        ...saveData,
+        password: password
+      };
+      const response = await createPassword(passwordData);
+      console.log('Save password response:', response);
+      toast.success("Password saved successfully!", {
+        position: 'top-center',
+        duration: 2000
+      });
+      setShowSaveModal(false);
+    } catch (error) {
+      console.error("Error saving password:", error);
+      toast.error("Failed to save password. Please try again.", {
+        position: 'top-center',
+        duration: 2000
+      });
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   useEffect(() => {
@@ -85,6 +151,93 @@ export function PasswordGenerator() {
 
   return (
     <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg">
+      {/* Save Password Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-4">Save Password</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Title*</label>
+                <input
+                  type="text"
+                  value={saveData.title}
+                  onChange={(e) => setSaveData({...saveData, title: e.target.value})}
+                  className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
+                  placeholder="e.g. Facebook Account"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={saveData.username}
+                  onChange={(e) => setSaveData({...saveData, username: e.target.value})}
+                  className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
+                  placeholder="username or email"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Website</label>
+                <input
+                  type="text"
+                  value={saveData.website}
+                  onChange={(e) => setSaveData({...saveData, website: e.target.value})}
+                  className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
+                  placeholder="https://"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Category</label>
+                <select
+                  value={saveData.category}
+                  onChange={(e) => setSaveData({...saveData, category: e.target.value})}
+                  className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
+                >
+                  <option value="Email">Email</option>
+                  <option value="Social Media">Social Media</option>
+                  <option value="Financial">Financial</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Work">Work</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg"
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={savePassword}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center gap-2"
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Save Password
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-white">Password Generator</h2>
         <button
@@ -119,6 +272,14 @@ export function PasswordGenerator() {
             title="Copy to clipboard"
           >
             {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+          </button>
+          <button
+            onClick={handleSaveClick}
+            className="p-2 text-slate-400 hover:text-white rounded-full"
+            disabled={!password}
+            title="Save password"
+          >
+            <Save size={18} />
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
   User,
   CreditCard,
   HelpCircle,
+  Heart,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
@@ -55,22 +56,19 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }) {
   const bottomMenuItems = [
     {
       id: "account",
-      label: "Account",
+      label: "Account Settings",
       icon: <User size={20} />,
-      onClick: () => navigate("/account"),
+      path: "/dashboard/account",
+      className: "bg-emerald-500/10 text-emerald-500",
+      onClick: () => navigate("/dashboard/account")
     },
     {
-      id: "billing",
-      label: "Billing",
-      icon: <CreditCard size={20} />,
-      onClick: () => navigate("/billing"),
+      id: "support",
+      label: "Support Us",
+      icon: <Heart size={20} />,
+      onClick: () => navigate("/support"),
     },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: <Settings size={20} />,
-      onClick: () => navigate("/settings"),
-    },
+    
     {
       id: "help",
       label: "Help & Support",
@@ -82,8 +80,15 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }) {
       label: "Logout",
       icon: <LogOut size={20} />,
       onClick: () => {
-        // Implement logout logic
+        // Clear authentication tokens
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('otpVerified')
+        
+        // Redirect to login
         navigate("/login")
+        
+        // Force full page reload to clear all state
+        window.location.reload()
       },
     },
   ]
@@ -148,8 +153,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }) {
                 <button
                   key={item.id}
                   className={`flex items-center w-full p-3 rounded-lg transition-all ${
-                    activeTab === item.id
-                      ? "bg-emerald-500/10 text-emerald-500"
+                    activeTab === item.id || item.id === "account"
+                      ? item.className || "bg-emerald-500/10 text-emerald-500"
                       : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
                   } ${!isOpen && "justify-center"}`}
                   onClick={() => {

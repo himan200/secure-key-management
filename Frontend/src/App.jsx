@@ -8,7 +8,10 @@ import { RegisterPage } from "./components/RegisterPage"
 import ForgotPassword from "./components/ForgotPassword"
 import ResetPassword from "./components/ResetPassword"
 import { Dashboard } from "./components/Dashboard/Dashboard" // Updated import path
-import  VerifyEmail  from "./components/VerifyEmail"
+import VerifyEmail from "./components/VerifyEmail"
+import { SupportPage } from "./components/SupportPage"
+import { HelpFaqPage } from "./components/HelpFaqPage"
+import { AboutPage } from "./components/AboutPage"
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -49,6 +52,9 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/support" element={<SupportPage />} />
+        <Route path="/help" element={<HelpFaqPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route
           path="/dashboard/*"
           element={

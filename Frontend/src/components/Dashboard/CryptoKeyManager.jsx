@@ -1,28 +1,32 @@
 "use client"
-import { useState } from "react"
-import { Key, Plus, Trash2, Eye, EyeOff, Copy, Download } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Key, Trash2, Eye, EyeOff, Copy, Download } from "lucide-react"
+import { useAuth } from "../../context/AuthContext.jsx"
+import api from "../../services/api"
 
 export function CryptoKeyManager() {
+  const { user } = useAuth()
   const [keys, setKeys] = useState([
     {
       id: "1",
-      name: "SSH-ED25519",
+      name: "Default SSH Key",
       type: "SSH",
-      fingerprint: "SHA256:AbCdEf123456...",
-      created: "2023-10-01",
-      expires: "2024-10-01",
+      fingerprint: "SHA256:AbCdEfGhIjKlMnOpQrStUvWxYz",
+      created: new Date().toISOString().split('T')[0],
+      expires: "2025-12-31",
       visible: false
     },
     {
-      id: "2", 
-      name: "GPG-Signing",
+      id: "2",
+      name: "Default GPG Key",
       type: "GPG",
       fingerprint: "ABCD 1234 EF56 7890",
-      created: "2023-09-15",
-      expires: "2025-09-15",
+      created: new Date().toISOString().split('T')[0],
+      expires: "2025-12-31",
       visible: false
     }
   ])
+  const [loading, setLoading] = useState(true)
   const [newKey, setNewKey] = useState({
     name: "",
     type: "SSH",
@@ -35,9 +39,33 @@ export function CryptoKeyManager() {
     ))
   }
 
-  const deleteKey = (id) => {
+  const deleteKey = async (id) => {
     if (confirm("Are you sure you want to delete this cryptographic key?")) {
-      setKeys(keys.filter(key => key.id !== id))
+      try {
+        await api.delete(`/keys/${id}`)
+        setKeys(keys.filter(key => key._id !== id))
+      } catch (err) {
+        console.error('Failed to delete key:', err)
+      }
+    }
+  }
+
+  useEffect(() => {
+    fetchKeys()
+  }, [])
+
+  const fetchKeys = async () => {
+    try {
+      setLoading(true)
+      const response = await api.get('/keys')
+      setKeys(response.data.map(key => ({
+        ...key,
+        visible: false
+      })))
+    } catch (err) {
+      console.error('Failed to fetch keys:', err)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -57,15 +85,9 @@ export function CryptoKeyManager() {
 
   return (
     <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-white">
-          Cryptographic Key Manager
-        </h2>
-        <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex items-center gap-2">
-          <Plus size={16} />
-          Add Key
-        </button>
-      </div>
+      <h2 className="text-xl font-semibold text-white mb-6">
+        Cryptographic Key Manager
+      </h2>
 
       {/* Key Generation Form */}
       <div className="bg-slate-700/50 p-4 rounded-lg mb-6">

@@ -33,16 +33,16 @@ export function Navbar({ isAuthenticated = false, userEmail = "" }) {
             <span className="text-lg font-medium">SecureKey</span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Reordered as requested */}
           <div className="hidden md:flex items-center gap-8">
-            <Link to="/features" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Features
-            </Link>
-            <Link to="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-              Pricing
-            </Link>
             <Link to="/about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
               About
+            </Link>
+            <Link to="/help" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              Help
+            </Link>
+            <Link to="/support" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              Support
             </Link>
           </div>
 
@@ -89,26 +89,26 @@ export function Navbar({ isAuthenticated = false, userEmail = "" }) {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Also reordered */}
         {isMenuOpen && (
           <div className="md:hidden py-4 space-y-2 border-t">
-            <Link
-              to="/features"
-              className="block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-            >
-              Features
-            </Link>
-            <Link
-              to="/pricing"
-              className="block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-            >
-              Pricing
-            </Link>
             <Link
               to="/about"
               className="block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
             >
               About
+            </Link>
+            <Link
+              to="/help"
+              className="block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+            >
+              Help
+            </Link>
+            <Link
+              to="/support"
+              className="block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+            >
+              Support
             </Link>
 
             {isAuthenticated ? (

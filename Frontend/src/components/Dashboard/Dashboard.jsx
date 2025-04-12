@@ -9,6 +9,7 @@ import { PasswordStorage } from "./PasswordStorage"
 import { PasswordStrengthChecker } from "./PasswordStrengthChecker"
 import { DarkWebMonitor } from "./DarkWebMonitor"
 import { CryptoKeyManager } from "./CryptoKeyManager"
+import { AccountSettings } from "./AccountSettings"
 import { Bell, Search, User, Moon, Sun, Shield } from "lucide-react"
 
 export function Dashboard() {
@@ -62,6 +63,7 @@ export function Dashboard() {
     else if (path.includes("/strength")) setActiveTab("strength")
     else if (path.includes("/darkweb")) setActiveTab("darkweb")
     else if (path.includes("/cryptokeys")) setActiveTab("cryptokeys")
+    else if (path.includes("/account")) setActiveTab("account")
   }, [location])
 
   const renderContent = () => {
@@ -71,6 +73,7 @@ export function Dashboard() {
       case "strength": return <PasswordStrengthChecker />
       case "darkweb": return <DarkWebMonitor />
       case "cryptokeys": return <CryptoKeyManager />
+      case "account": return <AccountSettings />
       default: return <PasswordGenerator />
     }
   }
@@ -82,6 +85,7 @@ export function Dashboard() {
       case "strength": return "Password Strength Checker"
       case "darkweb": return "Dark Web Monitor"
       case "cryptokeys": return "Crypto Key Manager"
+      case "account": return "Account Settings"
       default: return "Dashboard"
     }
   }

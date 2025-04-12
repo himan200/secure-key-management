@@ -358,6 +358,67 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// Controller to update user info
+const updateUserInfo = async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.fullname?.firstname) updates['fullname.firstname'] = req.body.fullname.firstname;
+    if (req.body.fullname?.lastname) updates['fullname.lastname'] = req.body.fullname.lastname;
+    if (req.body.email) updates.email = req.body.email;
+    if (req.body.date_of_birth) updates.date_of_birth = req.body.date_of_birth;
+
+    const user = await usermodel.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      user
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Controller to change password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await usermodel.findById(req.user._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -365,5 +426,7 @@ module.exports = {
   verifyLoginOtp,
   forgotPassword,
   resetPassword,
-  getCurrentUser
+  getCurrentUser,
+  updateUserInfo,
+  changePassword
 };

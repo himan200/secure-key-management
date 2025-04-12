@@ -92,4 +92,33 @@ router.get('/me',
   authController.getCurrentUser
 );
 
+// Update user info route
+router.patch('/me', 
+  authMiddleware.auth,
+  [
+    body('fullname.firstname').optional().isLength({ min: 2 }),
+    body('fullname.lastname').optional().isLength({ min: 2 }),
+    body('email').optional().isEmail(),
+    body('date_of_birth').optional().isISO8601()
+  ],
+  handleValidationErrors,
+  authController.updateUserInfo
+);
+
+// Change password route
+router.post('/change-password',
+  authMiddleware.auth,
+  [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword')
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+      .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+      .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+      .matches(/[0-9]/).withMessage('Password must contain at least one number')
+      .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character'),
+  ],
+  handleValidationErrors,
+  authController.changePassword
+);
+
 module.exports = router;

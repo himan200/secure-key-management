@@ -211,22 +211,35 @@ const verifyLoginOtp = async (req, res) => {
 const verify = async (req, res, next) => {
   try {
     const { token: rawToken } = req.query;
+    console.log("Verification attempt with token:", rawToken);
   
     if (!rawToken) {
+      console.log("Verification failed: Token is missing");
       return res.status(400).json({ message: 'Token is required' });
     }
   
     const cleanedToken = rawToken.trim();
     const user = await usermodel.findOne({ verificationToken: cleanedToken });
+    console.log("User found for token:", user ? user.email : "No user found");
+    console.log("User verificationExpires:", user ? user.verificationExpires : "N/A");
   
     if (!user) {
+      console.log("Verification failed: No user for token");
       return res.status(400).json({ message: 'User not found for this token' });
+    }
+
+    // Check if token is expired
+    if (!user.verificationExpires || user.verificationExpires < Date.now()) {
+      console.log("Verification failed: Token expired");
+      return res.status(400).json({ message: 'Verification token expired. Please request a new verification email.' });
     }
   
     user.isVerified = true;
     user.verificationToken = undefined;
+    user.verificationExpires = undefined;
   
-    await user.save(); // 👈 This might be failing!
+    await user.save();
+    console.log("Verification successful for user:", user.email);
   
     return res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {

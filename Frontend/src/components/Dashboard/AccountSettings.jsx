@@ -328,7 +328,7 @@ export function AccountSettings() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white bg-transparent focus:outline-none focus:ring-0 p-0 m-0 border-0"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       >
                         {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -350,7 +350,7 @@ export function AccountSettings() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white bg-transparent focus:outline-none focus:ring-0 p-0 m-0 border-0"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                       >
                         {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -394,7 +394,7 @@ export function AccountSettings() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white bg-transparent focus:outline-none focus:ring-0 p-0 m-0 border-0"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}

@@ -7,6 +7,7 @@ import { useSearchParams, useNavigate } from "react-router-dom"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "./Navbar"
+import  api  from "../services/api"
 import { Shield, Key, Lock, CheckCircle, XCircle, Loader2 } from "lucide-react"
 
 const VerifyEmail = () => {
@@ -26,6 +27,7 @@ const VerifyEmail = () => {
   hasVerified.current = true; // Prevents multiple verifications
 
     const verify = async () => {
+      console.log("Verifying email with token:", token);
       if (!token) {
         setStatus("error")
         setMessage("Token is missing in the URL.")
@@ -34,6 +36,7 @@ const VerifyEmail = () => {
 
       try {
         const res = await api.get(`/auth/verify-email?token=${token}`);
+        console.log("Verification response:", res);
 
         setStatus("success")
         setMessage(res.data.message || "Email verified successfully!")
@@ -41,6 +44,7 @@ const VerifyEmail = () => {
         // Optional: Redirect after 3 seconds
         setTimeout(() => navigate("/login"), 3000)
       } catch (err) {
+        console.error("Verification error:", err);
         setStatus("error")
         setMessage(err.response?.data?.message || "Verification failed. Token might be invalid or expired.")
       }

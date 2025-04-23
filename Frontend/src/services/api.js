@@ -88,7 +88,7 @@ export const verifyLoginOtp = async (userId, otp) => {
 };
 
 export const verifyEmail = async (token) => {
-  return api.get(`/auth/verify-email?token=${token}`);
+  return api.get(`/api/auth/verify-email?token=${token}`);
 };
 
 export const forgotPassword = async (email) => {

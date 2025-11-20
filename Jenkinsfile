@@ -27,7 +27,7 @@ pipeline {
             steps {
                 dir('Frontend') {
                 sh ' ls '
-                sh 'npm install'
+                sh 'npm install --leagacy-peer-deps'
                 }
             }
         }

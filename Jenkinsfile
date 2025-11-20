@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Cloning repo') {
             steps {
-                git 'https://github.com/himan200/secure-key-management.git'
+                git branch: 'main',  url: 'https://github.com/himan200/secure-key-management.git'
             }
         }
         stage('Checking Node Version') {

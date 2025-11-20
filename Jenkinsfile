@@ -24,13 +24,10 @@ pipeline {
                 dir('Frontend') {   // make sure this matches the actual folder name
                     sh 'ls'
                     sh 'npm install --legacy-peer-deps'
+                     sh 'npm run build'
                 }
             }
         }
-        stage('Build App'){
-            steps {
-                sh 'npm run build'
-            }
-        }
+        
     }
 }

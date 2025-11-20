@@ -25,7 +25,7 @@ pipeline {
         stage('Installing Frontend depend') {
             steps {
                 sh 'cd Frontend '
-                sh ' npm install --legacy-peer-deps'
+                sh ' ls '
             }
         }
         // stage('Installing USer-frontend depen') {

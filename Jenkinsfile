@@ -22,11 +22,11 @@ pipeline {
         //         sh 'cd backend && npm install'
         //     }
         // }
-        // stage('Installing Frontend depend') {
-        //     steps {
-        //         sh 'cd frontend && npm install'
-        //     }
-        // }
+        stage('Installing Frontend depend') {
+            steps {
+                sh 'cd frontend && npm install'
+            }
+        }
         // stage('Installing USer-frontend depen') {
         //     steps {
         //         sh 'cd user-portal-frontend && npm instal --legacy-peer-deps'

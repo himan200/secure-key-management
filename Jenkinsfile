@@ -13,6 +13,7 @@ pipeline {
         }
         stage('Checking Node Version') {
             steps {
+                
                 sh 'node -v'
                 sh 'npm -v'
             }
@@ -24,8 +25,10 @@ pipeline {
         // }
         stage('Installing Frontend depend') {
             steps {
-                sh 'cd Frontend '
+                dir('Frontend') {
                 sh ' ls '
+                sh 'npm install'
+                }
             }
         }
         // stage('Installing USer-frontend depen') {

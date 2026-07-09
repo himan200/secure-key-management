@@ -56,7 +56,7 @@ jobs:
           cache-dependency-path: Frontend/package-lock.json
 
       - name: Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
       
       - name: Lint
         run: npm run lint

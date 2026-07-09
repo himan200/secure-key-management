@@ -39,7 +39,7 @@ jobs:
           retention-days: 2
     
   frontend-build:
-    name: Build Frontend
+    name: build Frontend
     runs-on: ubuntu-latest
     defaults:
       run:
